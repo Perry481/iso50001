@@ -100,6 +100,94 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Dialog styles */
+.DialogContent {
+  background-color: white !important;
+  color: #171717 !important;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Make the close button styles more specific */
+.DialogContent button[type="button"][data-dialog-close="true"].absolute {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  padding: 0.25rem !important;
+  background-color: #ef4444 !important;
+  border-radius: 0.375rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 60 !important; /* Add z-index to ensure it's above other elements */
+}
+
+.DialogContent button[type="button"][data-dialog-close="true"].absolute:hover {
+  background-color: #dc2626 !important;
+}
+
+/* SVG icon styles */
+.DialogContent button[type="button"][data-dialog-close="true"].absolute svg {
+  color: white !important;
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Make sure this rule doesn't affect our close button */
+.DialogContent
+  button:not([variant="outline"]):not([data-dialog-close="true"]):not(
+    .absolute
+  ) {
+  background-color: #2563eb !important;
+  color: #fff !important;
+}
+.DialogTitle {
+  color: #171717 !important;
+  font-weight: 600;
+}
+
+.DialogDescription {
+  color: #4b5563 !important;
+}
+
+/* Form labels in dialog */
+.DialogContent label {
+  color: #374151 !important;
+  font-weight: 500;
+}
+
+/* Input fields in dialog */
+.DialogContent input {
+  background-color: white !important;
+  color: #171717 !important;
+  border-color: #d1d5db !important;
+}
+
+.DialogContent input:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Dialog buttons */
+.DialogContent button {
+  font-weight: 500;
+}
+
+.DialogContent button[variant="outline"] {
+  background-color: white !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+
+.DialogContent button:not([variant="outline"]) {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
 /* Add this to your globals.css */
 .brand-link {
   border-bottom: 1px solid #4f5962;
