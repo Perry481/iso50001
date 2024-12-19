@@ -4,7 +4,7 @@ export default function EnergyECF() {
     <>
       <div className="content-header">
         <div className="container-fluid">
-          <h1 className="m-0">能源ECF Page</h1>
+          <h1 className="m-0">請前往能源審查頁面</h1>
         </div>
       </div>
       <div className="content">

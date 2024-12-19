@@ -20,8 +20,6 @@ export default function EnergyECF() {
   const [reports, setReports] = useState<Report[]>([]);
   const [activeReport, setActiveReport] = useState<string>("");
   const [details, setDetails] = useState<Detail[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState(100);
   const [showReportList, setShowReportList] = useState(true);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -203,31 +201,22 @@ export default function EnergyECF() {
       },
     },
   });
-
-  useEffect(() => {
-    const loadReports = async () => {
-      try {
-        const response = await fetch("/api/energy-review");
-        const data = await response.json();
-        setReports(data.reports);
-        if (data.reports.length > 0) {
-          setActiveReport(data.reports[0].title);
-        }
-      } catch (error) {
-        console.error("Failed to load reports:", error);
-      } finally {
-        setIsLoading(false);
+  const loadReports = async () => {
+    try {
+      const response = await fetch("/api/energy-review");
+      const data = await response.json();
+      setReports(data.reports);
+      if (data.reports.length > 0) {
+        setActiveReport(data.reports[0].title);
       }
-    };
+    } catch (error) {
+      console.error("Failed to load reports:", error);
+    }
+  };
 
-    loadReports();
-  }, []);
-
-  useEffect(() => {
-    const loadDetails = async () => {
+  const loadDetails = useMemo(
+    () => async () => {
       if (!activeReport) return;
-
-      setIsLoading(true);
       try {
         const response = await fetch(
           `/api/energy-review?title=${encodeURIComponent(activeReport)}`
@@ -236,14 +225,17 @@ export default function EnergyECF() {
         setDetails(data.details);
       } catch (error) {
         console.error("Failed to load report details:", error);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    },
+    [activeReport]
+  );
+  useEffect(() => {
+    loadReports();
+  }, []);
 
+  useEffect(() => {
     loadDetails();
-  }, [activeReport]);
-
+  }, [loadDetails]);
   const handleReportSubmit = async (data: Omit<Report, "reviewerId">) => {
     try {
       if (editingReport) {
@@ -427,7 +419,7 @@ export default function EnergyECF() {
             </div>
           </div>
 
-          <div style={{ fontSize: `${zoomLevel}%` }}>
+          <div>
             <ThemeProvider theme={theme}>
               <MaterialReactTable
                 columns={columns}
