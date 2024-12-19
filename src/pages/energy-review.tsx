@@ -39,11 +39,11 @@ export default function EnergyECF() {
     null
   );
 
-  const handleZoomIn = () => {
+  const handleCompressView = () => {
     setColumnWidth((prev) => Math.max(MIN_COLUMN_WIDTH, prev - ZOOM_STEP));
   };
 
-  const handleZoomOut = () => {
+  const handleExpandView = () => {
     setColumnWidth((prev) => Math.min(MAX_COLUMN_WIDTH, prev + ZOOM_STEP));
   };
 
@@ -335,7 +335,7 @@ export default function EnergyECF() {
             {reports.map((report) => (
               <div
                 key={report.title}
-                className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:outline hover:outline-1 hover:outline-blue-500 cursor-pointer "
                 onClick={() => {
                   setActiveReport(report.title);
                   setShowReportList(false);
@@ -385,7 +385,11 @@ export default function EnergyECF() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold">{activeReport}</h1>
-              <Button variant="outline" onClick={() => setShowReportList(true)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowReportList(true)}
+                className="hover:!outline hover:!outline-1 hover:!outline-blue-500"
+              >
                 返回列表
               </Button>
             </div>
@@ -393,10 +397,11 @@ export default function EnergyECF() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={handleZoomIn}
+                onClick={handleCompressView} // Changed from handleExpandView
                 disabled={columnWidth <= MIN_COLUMN_WIDTH}
+                className="hover:!outline hover:!outline-1 hover:!outline-blue-500"
               >
-                <ZoomIn className="h-4 w-4" />
+                <ZoomOut className="h-4 w-4" />
               </Button>
               <span className="text-sm text-gray-500 min-w-[4rem] text-center">
                 {Math.round((columnWidth / BASE_COLUMN_WIDTH) * 100)}%
@@ -404,10 +409,11 @@ export default function EnergyECF() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={handleZoomOut}
+                onClick={handleExpandView} // Changed from handleCompressView
                 disabled={columnWidth >= MAX_COLUMN_WIDTH}
+                className="hover:!outline hover:!outline-1 hover:!outline-blue-500"
               >
-                <ZoomOut className="h-4 w-4" />
+                <ZoomIn className="h-4 w-4" />
               </Button>
               <Button
                 className="bg-green-500 hover:bg-green-600 text-white"
