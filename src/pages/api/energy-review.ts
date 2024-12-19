@@ -11,32 +11,32 @@ interface ApiResponse {
 export const mockReports: Report[] = [
   {
     reviewerId: "18001",
-    title: "2021盤查報告",
+    title: "2021審查報告",
     startDate: "2021-01-01",
     endDate: "2021-12-31",
   },
   {
     reviewerId: "18001",
-    title: "2022盤查報告",
+    title: "2022審查報告",
     startDate: "2022-01-01",
     endDate: "2022-12-31",
   },
   {
     reviewerId: "21108",
-    title: "2023年能源盤查(總廠)",
+    title: "2023年能源審查(總廠)",
     startDate: "2023-01-01",
     endDate: "2023-12-31",
   },
   {
     reviewerId: "24007",
-    title: "2022年能源盤查(總廠)",
+    title: "2022年能源審查(總廠)",
     startDate: "2022-01-01",
     endDate: "2022-12-31",
   },
 ];
 
 export const mockDetails: Record<string, Detail[]> = {
-  "2021盤查報告": [
+  "2021審查報告": [
     {
       id: 1,
       name: "2 ZERO-2",
@@ -138,8 +138,8 @@ export const mockDetails: Record<string, Detail[]> = {
       performanceEvaluation: "不確定",
     },
   ],
-  "2022盤查報告": [],
-  "2023年能源盤查(總廠)": [
+  "2022審查報告": [],
+  "2023年能源審查(總廠)": [
     {
       id: 1,
       name: "2 ZERO-2",
@@ -241,7 +241,7 @@ export const mockDetails: Record<string, Detail[]> = {
       performanceEvaluation: "不確定",
     },
   ],
-  "2022年能源盤查(總廠)": [],
+  "2022年能源審查(總廠)": [],
 };
 export default function handler(
   req: NextApiRequest,

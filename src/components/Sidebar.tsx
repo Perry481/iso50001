@@ -60,7 +60,7 @@ const Sidebar = () => {
       <aside className="main-sidebar sidebar-dark-primary elevation-4">
         {/* Brand Logo */}
         <Link href="/" className="brand-link">
-          <span className="brand-text font-weight-light">能耗管理</span>
+          <span className="brand-text font-weight-light">Iso50001能耗管理</span>
         </Link>
 
         {/* Sidebar */}
