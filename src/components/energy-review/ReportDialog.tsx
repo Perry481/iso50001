@@ -10,10 +10,18 @@ import { Input } from "../ui/input";
 import { useState, useEffect } from "react";
 import type { Report } from "../../lib/energy-review/types";
 
+// Define ReportFormData type
+type ReportFormData = {
+  title: string;
+  reviewerId: string;
+  startDate: string;
+  endDate: string;
+};
+
 type ReportDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: Omit<Report, "reviewerId">) => Promise<void>;
+  onSubmit: (data: ReportFormData) => Promise<void>;
   initialData?: Report;
   mode: "create" | "edit";
 };
@@ -25,8 +33,9 @@ export function ReportDialog({
   initialData,
   mode,
 }: ReportDialogProps) {
-  const [formData, setFormData] = useState<Omit<Report, "reviewerId">>({
+  const [formData, setFormData] = useState<ReportFormData>({
     title: "",
+    reviewerId: "",
     startDate: "",
     endDate: "",
   });
@@ -35,20 +44,20 @@ export function ReportDialog({
     if (open) {
       setFormData({
         title: initialData?.title || "",
+        reviewerId: initialData?.reviewerId || "",
         startDate: initialData?.startDate || "",
         endDate: initialData?.endDate || "",
       });
     }
   }, [open, initialData]);
 
-  const handleSubmit = async () => {
-    await onSubmit(formData);
-    onOpenChange(false);
+  const handleSubmit = () => {
+    onSubmit(formData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] DialogContent [&>button]:bg-destructive [&>button]:hover:bg-destructive/90">
+      <DialogContent className="sm:max-w-[425px] DialogContent">
         <DialogHeader>
           <DialogTitle className="DialogTitle">
             {mode === "create" ? "新增報告" : "編輯報告"}
@@ -73,6 +82,21 @@ export function ReportDialog({
               className="col-span-3"
             />
           </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label htmlFor="reviewerId" className="text-right">
+              審查人員
+            </label>
+            <Input
+              id="reviewerId"
+              value={formData.reviewerId}
+              onChange={(e) =>
+                setFormData({ ...formData, reviewerId: e.target.value })
+              }
+              className="col-span-3"
+            />
+          </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="startDate" className="text-right">
               開始日期
@@ -84,7 +108,12 @@ export function ReportDialog({
               onChange={(e) =>
                 setFormData({ ...formData, startDate: e.target.value })
               }
-              className="col-span-3"
+              className="col-span-3 date-input"
+              onClick={(e) => {
+                if (e.target instanceof HTMLInputElement) {
+                  e.target.showPicker();
+                }
+              }}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -98,7 +127,12 @@ export function ReportDialog({
               onChange={(e) =>
                 setFormData({ ...formData, endDate: e.target.value })
               }
-              className="col-span-3"
+              className="col-span-3 date-input"
+              onClick={(e) => {
+                if (e.target instanceof HTMLInputElement) {
+                  e.target.showPicker();
+                }
+              }}
             />
           </div>
         </div>

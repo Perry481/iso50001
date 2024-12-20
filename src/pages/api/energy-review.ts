@@ -33,6 +33,36 @@ export const mockReports: Report[] = [
     startDate: "2022-01-01",
     endDate: "2022-12-31",
   },
+  {
+    reviewerId: "24007",
+    title: "test(1)",
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
+  {
+    reviewerId: "24007",
+    title: "test(2)",
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
+  {
+    reviewerId: "24007",
+    title: "test(3)",
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
+  {
+    reviewerId: "24007",
+    title: "test(4)",
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
+  {
+    reviewerId: "24007",
+    title: "test(5)",
+    startDate: "2023-01-01",
+    endDate: "2023-12-31",
+  },
 ];
 
 export const mockDetails: Record<string, Detail[]> = {

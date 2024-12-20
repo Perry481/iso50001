@@ -285,7 +285,12 @@ export function DetailDialog({
               onChange={(e) =>
                 setFormData({ ...formData, startDate: e.target.value })
               }
-              className="col-span-3"
+              className="col-span-3 date-input"
+              onClick={(e) => {
+                if (e.target instanceof HTMLInputElement) {
+                  e.target.showPicker();
+                }
+              }}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -299,7 +304,12 @@ export function DetailDialog({
               onChange={(e) =>
                 setFormData({ ...formData, endDate: e.target.value })
               }
-              className="col-span-3"
+              className="col-span-3 date-input"
+              onClick={(e) => {
+                if (e.target instanceof HTMLInputElement) {
+                  e.target.showPicker();
+                }
+              }}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

@@ -15,6 +15,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../components/ui/dialog";
+import PaginatedReports from "@/components/energy-review/PaginatedReports";
+
+// Add the ReportFormData type
+type ReportFormData = {
+  title: string;
+  reviewerId: string;
+  startDate: string;
+  endDate: string;
+};
 
 export default function EnergyECF() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -36,6 +45,7 @@ export default function EnergyECF() {
   const [deleteDetailConfirm, setDeleteDetailConfirm] = useState<Detail | null>(
     null
   );
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleCompressView = () => {
     setColumnWidth((prev) => Math.max(MIN_COLUMN_WIDTH, prev - ZOOM_STEP));
@@ -236,13 +246,17 @@ export default function EnergyECF() {
   useEffect(() => {
     loadDetails();
   }, [loadDetails]);
-  const handleReportSubmit = async (data: Omit<Report, "reviewerId">) => {
+  // energy-review.tsx
+  const handleReportSubmit = async (data: ReportFormData) => {
     try {
       if (editingReport) {
         await fetch("/api/energy-review", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "report", data: { ...data } }),
+          body: JSON.stringify({
+            type: "report",
+            data: data,
+          }),
         });
       } else {
         await fetch("/api/energy-review", {
@@ -250,7 +264,7 @@ export default function EnergyECF() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "report",
-            data: { ...data, reviewerId: "system" },
+            data: data,
           }),
         });
       }
@@ -310,68 +324,26 @@ export default function EnergyECF() {
   return (
     <div className="p-6 space-y-6">
       {showReportList ? (
-        <>
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl">報告列表</h2>
-            <Button
-              className="bg-green-500 hover:bg-green-600 text-white"
-              onClick={() => {
-                setEditingReport(undefined);
-                setReportDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" /> 新增報告
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {reports.map((report) => (
-              <div
-                key={report.title}
-                className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:outline hover:outline-1 hover:outline-blue-500 cursor-pointer "
-                onClick={() => {
-                  setActiveReport(report.title);
-                  setShowReportList(false);
-                }}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-lg text-gray-900">
-                      {report.title}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
-                      {report.startDate} - {report.endDate}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:bg-blue-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingReport(report);
-                        setReportDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4 text-blue-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:bg-red-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteReportConfirm(report);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        <PaginatedReports
+          reports={reports}
+          onReportClick={(report) => {
+            setActiveReport(report.title);
+            setShowReportList(false);
+          }}
+          onEditReport={(report) => {
+            setEditingReport(report);
+            setReportDialogOpen(true);
+          }}
+          onDeleteReport={(report) => {
+            setDeleteReportConfirm(report);
+          }}
+          onAddReport={() => {
+            setEditingReport(undefined);
+            setReportDialogOpen(true);
+          }}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+        />
       ) : (
         <>
           <div className="flex justify-between items-center mb-4">

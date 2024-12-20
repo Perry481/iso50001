@@ -242,3 +242,27 @@ body {
 .user-panel .info a:hover {
   color: #fff;
 }
+
+/* Add these styles to your globals.css */
+input[type="date"] {
+  /* Move calendar icon to the right */
+  text-align: left;
+  position: relative;
+  padding-right: 30px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 8px;
+  cursor: pointer;
+}
+
+/* Make date picker popup wider */
+::-webkit-datetime-edit {
+  width: 100%;
+}
+
+/* Style the date picker popup */
+input[type="date"]::-webkit-calendar-picker {
+  width: 100%;
+}
