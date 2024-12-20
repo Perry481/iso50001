@@ -2,6 +2,7 @@
 import { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
+// Dynamically import Sidebar to prevent SSR issues
 const Sidebar = dynamic(() => import("./Sidebar"), {
   ssr: false,
 });

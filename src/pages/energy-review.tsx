@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "../components/ui/dialog";
 import PaginatedReports from "@/components/energy-review/PaginatedReports";
+import Tooltip from "@mui/material/Tooltip";
 
 // Add the ReportFormData type
 type ReportFormData = {
@@ -23,6 +24,44 @@ type ReportFormData = {
   reviewerId: string;
   startDate: string;
   endDate: string;
+};
+
+// Add this before the columns definition
+const tooltipProps = {
+  arrow: true,
+  placement: "top" as const,
+  enterDelay: 0,
+  leaveDelay: 0,
+  enterTouchDelay: 0,
+  TransitionProps: { timeout: 0 },
+  PopperProps: {
+    modifiers: [
+      {
+        name: "offset",
+        options: {
+          offset: [0, -8],
+        },
+      },
+    ],
+  },
+  componentsProps: {
+    tooltip: {
+      sx: {
+        bgcolor: "rgba(97, 97, 97, 0.8)",
+        "& .MuiTooltip-arrow": {
+          color: "rgba(97, 97, 97, 0.8)",
+        },
+        padding: "8px 12px",
+        fontSize: "0.95rem",
+        fontWeight: 400,
+        borderRadius: "4px",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+        minWidth: "80px",
+        textAlign: "center",
+        transform: "none",
+      },
+    },
+  },
 };
 
 export default function EnergyECF() {
@@ -34,10 +73,10 @@ export default function EnergyECF() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<Report | undefined>();
   const [editingDetail, setEditingDetail] = useState<Detail | undefined>();
-  const BASE_COLUMN_WIDTH = 100; // Reduced from 120 to get closer to 83% default view
-  const MIN_COLUMN_WIDTH = 50; // Reduced minimum to allow more zoom in
-  const MAX_COLUMN_WIDTH = 250; // Increased maximum to allow more zoom out
-  const ZOOM_STEP = 10; // Smaller step size for finer control
+  const BASE_COLUMN_WIDTH = 110; // New base (previous 120% becomes 100%)
+  const MIN_COLUMN_WIDTH = 55; // Adjusted minimum (50 * 1.2)
+  const MAX_COLUMN_WIDTH = 275; // Adjusted maximum (250 * 1.2)
+  const ZOOM_STEP = 11; // Adjusted zoom step (10 * 1.2)
   const [columnWidth, setColumnWidth] = useState(BASE_COLUMN_WIDTH);
   const [deleteReportConfirm, setDeleteReportConfirm] = useState<Report | null>(
     null
@@ -46,6 +85,10 @@ export default function EnergyECF() {
     null
   );
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const handleCompressView = () => {
     setColumnWidth((prev) => Math.max(MIN_COLUMN_WIDTH, prev - ZOOM_STEP));
@@ -59,54 +102,123 @@ export default function EnergyECF() {
     () => [
       {
         accessorKey: "name",
-        header: "名稱",
+        header: "設備名稱",
         size: columnWidth + 30,
+        Header: ({ column }) => (
+          <Tooltip title="設備名稱" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>設備名稱</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "type",
-        header: "類型",
+        header: "設備類型",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="設備類型" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>設備類型</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "group",
         header: "群組",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="群組" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>群組</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "area",
-        header: "區域",
+        header: "場域",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="場域" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>場域</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "department",
         header: "部門",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="部門" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>部門</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "workHours",
-        header: "工作時數",
-        size: columnWidth,
-        Cell: ({ cell }) => cell.getValue<number>().toFixed(0),
-      },
-      {
-        accessorKey: "workDays",
-        header: "工作天數",
-        size: columnWidth,
-        Cell: ({ cell }) => cell.getValue<number>().toFixed(0),
-      },
-      {
-        accessorKey: "dailyHours",
         header: "每日時數",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="每日時數" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>每日時數</span>
+            </div>
+          </Tooltip>
+        ),
         Cell: ({ cell }) => {
           const value = cell.getValue<number>();
           return value ? value.toFixed(0) : "-";
         },
       },
       {
-        accessorKey: "workingDays",
+        accessorKey: "workDays",
         header: "工作天數",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="工作天數" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>工作天數</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(0) : "-";
+        },
+      },
+      {
+        accessorKey: "loadFactor",
+        header: "負載係數",
+        size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="負載係數" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>負載係數</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(0) : "-";
+        },
+      },
+      {
+        accessorKey: "quantity",
+        header: "數量",
+        size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="數量" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>數量</span>
+            </div>
+          </Tooltip>
+        ),
         Cell: ({ cell }) => {
           const value = cell.getValue<number>();
           return value ? value.toFixed(0) : "-";
@@ -116,24 +228,61 @@ export default function EnergyECF() {
         accessorKey: "totalHours",
         header: "總時數",
         size: columnWidth,
-        Cell: ({ cell }) => cell.getValue<number>().toFixed(2),
+        Header: ({ column }) => (
+          <Tooltip title="總時數" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>總時數</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(2) : "-";
+        },
       },
       {
         accessorKey: "kwPerHour",
-        header: "每小時耗電量 (kW)",
+        header: "kW/Hour",
         size: columnWidth + 40,
-        Cell: ({ cell }) => cell.getValue<number>().toFixed(1),
+        Header: ({ column }) => (
+          <Tooltip title="kW/Hour" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>kW/Hour</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(1) : "-";
+        },
       },
       {
         accessorKey: "actualEnergy",
-        header: "實際耗電量",
+        header: "實際能耗",
         size: columnWidth + 20,
-        Cell: ({ cell }) => cell.getValue<number>().toFixed(2),
+        Header: ({ column }) => (
+          <Tooltip title="實際能耗" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>實際能耗</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(2) : "-";
+        },
       },
       {
         accessorKey: "actualConsumption",
-        header: "實際能耗",
+        header: "能耗(度)",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="能耗(度)" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>能耗(度)</span>
+            </div>
+          </Tooltip>
+        ),
         Cell: ({ cell }) => {
           const value = cell.getValue<number>();
           return value ? value.toFixed(2) : "-";
@@ -143,21 +292,49 @@ export default function EnergyECF() {
         accessorKey: "startDate",
         header: "開始日期",
         size: columnWidth + 20,
+        Header: ({ column }) => (
+          <Tooltip title="開始日期" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>開始日期</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "endDate",
         header: "結束日期",
         size: columnWidth + 20,
+        Header: ({ column }) => (
+          <Tooltip title="結束日期" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>結束日期</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "dataQuality",
         header: "數據品質",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="數據品質" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>數據品質</span>
+            </div>
+          </Tooltip>
+        ),
       },
       {
         accessorKey: "performanceEvaluation",
         header: "績效評估",
         size: columnWidth,
+        Header: ({ column }) => (
+          <Tooltip title="績效評估" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>績效評估</span>
+            </div>
+          </Tooltip>
+        ),
       },
     ],
     [columnWidth]
@@ -322,7 +499,7 @@ export default function EnergyECF() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 space-y-2">
       {showReportList ? (
         <PaginatedReports
           reports={reports}
@@ -346,7 +523,7 @@ export default function EnergyECF() {
         />
       ) : (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold">{activeReport}</h1>
               <Button
@@ -398,69 +575,123 @@ export default function EnergyECF() {
                 data={details}
                 enableColumnActions={false}
                 enableColumnFilters={false}
-                enablePagination={false}
                 enableTopToolbar={false}
-                enableBottomToolbar={false}
-                enableRowSelection={false}
-                enableColumnResizing={false}
                 enableStickyHeader
+                enablePagination
+                enableColumnResizing
                 muiTableContainerProps={{
                   sx: {
-                    maxHeight: "70vh",
-                    overflow: "auto",
-                    width: "100%",
+                    maxHeight: "calc(75vh - 20px)",
                   },
+                }}
+                muiPaginationProps={{
+                  rowsPerPageOptions: [5, 10, 20, 50],
+                  showFirstButton: true,
+                  showLastButton: true,
+                  sx: {
+                    marginTop: "4px",
+                  },
+                }}
+                localization={{
+                  rowsPerPage: "每頁行數",
+                  of: "/",
+                  noResultsFound: "沒有找到結果",
+                  noRecordsToDisplay: "沒有記錄可顯示",
+                }}
+                initialState={{
+                  pagination: {
+                    pageSize: 10,
+                    pageIndex: 0,
+                  },
+                  density: "compact",
                 }}
                 muiTablePaperProps={{
                   sx: {
                     borderRadius: "8px",
                     border: "1px solid #e5e7eb",
+                    width: "100%",
+                    overflow: "hidden",
                   },
                 }}
                 defaultColumn={{
+                  minSize: 50,
+                  maxSize: 1000,
+                  size: columnWidth,
                   muiTableHeadCellProps: {
                     sx: {
                       whiteSpace: "normal",
-                      height: "auto",
-                      padding: "8px",
-                      backgroundColor: "#f9fafb",
+                      height: "40px",
+                      padding: "0 12px",
+                      backgroundColor: "#f8fafc",
                       fontWeight: "600",
                       fontSize: "0.875rem",
-                      borderRight: "1px solid #e5e7eb",
+                      color: "#475569",
+                      borderRight: "1px solid #e2e8f0",
+                      borderBottom: "1px solid #e2e8f0",
+                      display: "flex !important",
+                      alignItems: "center !important",
+                      justifyContent: "center",
                       "&:last-child": {
-                        borderRight: "none",
+                        borderRight: "1px solid #e2e8f0",
                       },
-                      "& .MuiTableSortLabel-root": {
+                      "& .Mui-TableHeadCell-Content": {
                         width: "100%",
                         display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
-                        justifyContent: "space-between",
+                        alignItems: "center !important",
+                        justifyContent: "center",
+                        padding: "0",
+                        textAlign: "center",
+                        margin: "0",
                       },
-                      "& .MuiTableSortLabel-icon": {
-                        margin: 0,
+                      "& .Mui-TableHeadCell-ResizeHandle": {
+                        width: "1px",
+                        right: "0",
+                        height: "100%",
+                        position: "absolute",
+                        cursor: "col-resize",
+                        touchAction: "none",
+                        opacity: 0,
+                        "&:hover, &.isResizing": {
+                          opacity: 1,
+                          backgroundColor: "#94a3b8",
+                          width: "3px",
+                          right: "-1.5px",
+                        },
                       },
                     },
                   },
                   muiTableBodyCellProps: {
                     sx: {
-                      padding: "8px",
-                      borderRight: "1px solid #e5e7eb",
+                      padding: "4px 12px",
+                      borderRight: "1px solid #e2e8f0",
                       "&:last-child": {
-                        borderRight: "none",
+                        borderRight: "1px solid #e2e8f0",
                       },
                     },
                   },
                 }}
+                columnResizeMode="onChange"
+                enableRowActions
                 displayColumnDefOptions={{
                   "mrt-row-actions": {
                     header: "操作",
                     size: 100,
+                    muiTableHeadCellProps: {
+                      align: "center",
+                      sx: {
+                        borderRight: "1px solid #e2e8f0",
+                      },
+                    },
+                    muiTableBodyCellProps: {
+                      align: "center",
+                      sx: {
+                        borderRight: "1px solid #e2e8f0",
+                      },
+                    },
                   },
                 }}
-                enableRowActions
                 renderRowActions={({ row }) => (
-                  <div className="flex gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"

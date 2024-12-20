@@ -6,23 +6,23 @@ export type Report = {
   endDate: string;
 };
 
-export type Detail = {
+export interface Detail {
   id: number;
   name: string;
   type: string;
   group: string;
   area: string;
-  department?: string;
-  workHours: number;
-  workDays: number;
-  dailyHours?: number;
-  workingDays?: number;
+  department: string;
+  workHours: number | undefined;
+  workDays: number | undefined;
+  loadFactor: number | undefined;
+  quantity: number | undefined;
   totalHours: number;
   kwPerHour: number;
   actualEnergy: number;
-  actualConsumption?: number;
+  actualConsumption: number | undefined;
   startDate: string;
   endDate: string;
   dataQuality: number;
   performanceEvaluation: string;
-};
+}

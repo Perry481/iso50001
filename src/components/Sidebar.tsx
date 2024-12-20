@@ -40,8 +40,17 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Navbar */}
-      <nav className="main-header navbar navbar-expand navbar-dark">
+      {/* Navbar - Update position and z-index */}
+      <nav
+        className="main-header navbar navbar-expand navbar-dark"
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          left: 0,
+          zIndex: 1030,
+        }}
+      >
         <ul className="navbar-nav">
           <li className="nav-item">
             <button
@@ -56,8 +65,17 @@ const Sidebar = () => {
         </ul>
       </nav>
 
-      {/* Main Sidebar Container */}
-      <aside className="main-sidebar sidebar-dark-primary elevation-4">
+      {/* Main Sidebar Container - Update position and height */}
+      <aside
+        className="main-sidebar sidebar-dark-primary elevation-4"
+        style={{
+          position: "fixed",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          overflowY: "auto",
+        }}
+      >
         {/* Brand Logo */}
         <Link href="/" className="brand-link">
           <span className="brand-text font-weight-light">Iso50001能耗管理</span>

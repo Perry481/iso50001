@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useState, useEffect } from "react";
 import type { Report } from "../../lib/energy-review/types";
+import { DatePicker } from "../ui/date-picker";
 
 // Define ReportFormData type
 type ReportFormData = {
@@ -101,39 +102,29 @@ export function ReportDialog({
             <label htmlFor="startDate" className="text-right">
               開始日期
             </label>
-            <Input
-              id="startDate"
-              type="date"
-              value={formData.startDate}
-              onChange={(e) =>
-                setFormData({ ...formData, startDate: e.target.value })
-              }
-              className="col-span-3 date-input"
-              onClick={(e) => {
-                if (e.target instanceof HTMLInputElement) {
-                  e.target.showPicker();
+            <div className="col-span-3">
+              <DatePicker
+                value={formData.startDate}
+                onChange={(value) =>
+                  setFormData({ ...formData, startDate: value })
                 }
-              }}
-            />
+                label="開始日期"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="endDate" className="text-right">
               結束日期
             </label>
-            <Input
-              id="endDate"
-              type="date"
-              value={formData.endDate}
-              onChange={(e) =>
-                setFormData({ ...formData, endDate: e.target.value })
-              }
-              className="col-span-3 date-input"
-              onClick={(e) => {
-                if (e.target instanceof HTMLInputElement) {
-                  e.target.showPicker();
+            <div className="col-span-3">
+              <DatePicker
+                value={formData.endDate}
+                onChange={(value) =>
+                  setFormData({ ...formData, endDate: value })
                 }
-              }}
-            />
+                label="結束日期"
+              />
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-3">

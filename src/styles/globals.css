@@ -245,7 +245,6 @@ body {
 
 /* Add these styles to your globals.css */
 input[type="date"] {
-  /* Move calendar icon to the right */
   text-align: left;
   position: relative;
   padding-right: 30px;
@@ -257,12 +256,259 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-/* Make date picker popup wider */
 ::-webkit-datetime-edit {
   width: 100%;
 }
 
-/* Style the date picker popup */
 input[type="date"]::-webkit-calendar-picker {
   width: 100%;
+}
+
+/* Add these styles */
+.MuiDialog-root {
+  contain: paint;
+  /* Disable dialog transition */
+  transition: none !important;
+}
+
+/* Disable MUI Dialog transitions */
+.MuiDialog-backdrop {
+  transition: none !important;
+}
+
+.MuiDialog-paper {
+  transition: none !important;
+}
+
+.MuiDatePicker-root {
+  contain: layout style paint;
+  /* Disable date picker transitions */
+  transition: none !important;
+}
+
+/* Disable date picker popup transitions */
+.MuiPickersPopper-root {
+  transition: none !important;
+}
+
+.MuiPickersPopper-paper {
+  transition: none !important;
+}
+
+/* Prevent CLS (Content Layout Shift) */
+.DialogContent {
+  min-height: 200px;
+  contain: layout style;
+  /* Disable any potential transitions */
+  transition: none !important;
+}
+
+/* Disable all MUI transitions in dialogs */
+.DialogContent * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Override Radix Dialog animations */
+@keyframes contentShow {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes overlayShow {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Replace existing animation with hardware-accelerated transform */
+[data-state="open"] .DialogOverlay {
+  opacity: 1;
+  transform: translateZ(0); /* Force GPU acceleration */
+}
+
+[data-state="open"] .DialogContent {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateZ(0); /* Force GPU acceleration */
+}
+
+/* Remove all the complex animations and transitions */
+.DialogOverlay,
+.DialogContent {
+  animation: none !important;
+  transition: none !important;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Simple fade for overlay */
+.DialogOverlay[data-state="open"] {
+  opacity: 1;
+}
+
+.DialogOverlay[data-state="closed"] {
+  opacity: 0;
+}
+
+/* Simple transform for content */
+.DialogContent[data-state="open"] {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateZ(0);
+}
+
+.DialogContent[data-state="closed"] {
+  opacity: 0;
+  transform: translate(-50%, -60%) translateZ(0);
+}
+
+/* Add these styles at the end of your globals.css */
+
+/* Fix for AdminLTE layout */
+body.sidebar-mini {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Wrapper container */
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Main Sidebar Container */
+.main-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
+  transition: width 0.3s ease-in-out;
+}
+
+/* Main content wrapper positioning */
+.content-wrapper {
+  margin-left: 250px;
+  margin-top: 57px;
+  min-height: calc(100vh - 57px);
+  flex: 1;
+  overflow-y: auto;
+  transition: margin-left 0.3s ease-in-out;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+/* Main content area */
+.main-content {
+  padding: 0.75rem 1rem;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* Main Header (navbar) */
+.main-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 57px;
+  z-index: 1000;
+}
+
+/* Sidebar scroll area */
+.main-sidebar .sidebar {
+  height: calc(100% - 57px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1rem;
+}
+
+/* Collapsed sidebar state */
+body.sidebar-collapse .content-wrapper {
+  margin-left: 4.6rem;
+}
+
+.sidebar-mini.sidebar-collapse .main-sidebar {
+  width: 4.6rem;
+}
+
+.sidebar-mini.sidebar-collapse .main-sidebar:hover {
+  width: 250px;
+}
+
+/* Add these styles to your existing DialogContent styles section */
+
+/* Select field styles to match input fields */
+.DialogContent .select-trigger {
+  background-color: white !important;
+  color: #171717 !important;
+  border-color: #d1d5db !important;
+}
+
+.DialogContent .select-trigger:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Override any blue background on the select trigger */
+.DialogContent button[role="combobox"] {
+  background-color: white !important;
+  color: #171717 !important;
+}
+
+/* Make sure the select trigger doesn't get the blue button styles */
+.DialogContent button[role="combobox"]:not([variant="outline"]) {
+  background-color: white !important;
+  color: #171717 !important;
+}
+
+/* Update these styles in your DialogContent section */
+
+/* Make the selector more specific for select trigger buttons */
+.DialogContent
+  button[role="combobox"].select-trigger:not([variant="outline"]):not(
+    [data-dialog-close="true"]
+  ):not(.absolute) {
+  background-color: white !important;
+  color: #171717 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Update the focus state styles to match input fields */
+.DialogContent button[role="combobox"].select-trigger:focus {
+  outline: none !important;
+  border-color: #2563eb !important;
+  /* Remove the box shadow to match input fields */
+  box-shadow: none !important;
+}
+
+/* Add a hover state that matches inputs */
+.DialogContent button[role="combobox"].select-trigger:hover {
+  border-color: #d1d5db !important;
+}
+
+/* Make sure the base state matches inputs exactly */
+.DialogContent
+  button[role="combobox"].select-trigger:not([variant="outline"]):not(
+    [data-dialog-close="true"]
+  ):not(.absolute) {
+  background-color: white !important;
+  color: #171717 !important;
+  border-color: #d1d5db !important;
+  border-width: 1px !important;
+  border-style: solid !important;
 }

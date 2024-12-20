@@ -7,8 +7,17 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Detail } from "../../lib/energy-review/types";
+import { DatePicker } from "../ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Device } from "../../pages/api/energy-review";
 
 type DetailDialogProps = {
   open: boolean;
@@ -18,6 +27,23 @@ type DetailDialogProps = {
   mode: "create" | "edit";
 };
 
+const PERFORMANCE_EVALUATION_OPTIONS = [
+  "不合格",
+  "正在改善中",
+  "初評具潛力",
+  "不確定",
+] as const;
+
+type PerformanceEvaluation = (typeof PERFORMANCE_EVALUATION_OPTIONS)[number];
+
+const DATA_QUALITY_OPTIONS = [1, 2] as const;
+
+type DataQuality = (typeof DATA_QUALITY_OPTIONS)[number];
+
+interface DeviceSelection {
+  [key: string]: boolean;
+}
+
 export function DetailDialog({
   open,
   onOpenChange,
@@ -25,53 +51,139 @@ export function DetailDialog({
   initialData,
   mode,
 }: DetailDialogProps) {
-  const [formData, setFormData] = useState<Omit<Detail, "id">>({
-    name: "",
-    type: "",
-    group: "",
-    area: "",
-    department: "",
-    workHours: 0,
-    workDays: 0,
-    dailyHours: 0,
-    workingDays: 0,
-    totalHours: 0,
-    kwPerHour: 0,
-    actualEnergy: 0,
-    actualConsumption: 0,
-    startDate: "",
-    endDate: "",
-    dataQuality: 0,
-    performanceEvaluation: "",
-  });
+  const initialFormData = useMemo(
+    () => ({
+      name: "",
+      type: "",
+      group: "",
+      area: "",
+      department: "",
+      workHours: undefined,
+      workDays: undefined,
+      loadFactor: undefined,
+      quantity: undefined,
+      totalHours: 0,
+      kwPerHour: 0,
+      actualEnergy: 0,
+      actualConsumption: undefined,
+      startDate: "",
+      endDate: "",
+      dataQuality: null as unknown as DataQuality,
+      performanceEvaluation: "" as PerformanceEvaluation,
+    }),
+    []
+  );
+
+  const [formData, setFormData] = useState<Omit<Detail, "id">>(initialFormData);
+  const [error, setError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("生產設備");
+  const [selectedDevices, setSelectedDevices] = useState<DeviceSelection>({});
+  const [selectAll, setSelectAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setFormData({
-        name: initialData?.name || "",
-        type: initialData?.type || "",
-        group: initialData?.group || "",
-        area: initialData?.area || "",
-        department: initialData?.department || "",
-        workHours: initialData?.workHours || 0,
-        workDays: initialData?.workDays || 0,
-        dailyHours: initialData?.dailyHours || 0,
-        workingDays: initialData?.workingDays || 0,
-        totalHours: initialData?.totalHours || 0,
-        kwPerHour: initialData?.kwPerHour || 0,
-        actualEnergy: initialData?.actualEnergy || 0,
-        actualConsumption: initialData?.actualConsumption || 0,
-        startDate: initialData?.startDate || "",
-        endDate: initialData?.endDate || "",
-        dataQuality: initialData?.dataQuality || 0,
-        performanceEvaluation: initialData?.performanceEvaluation || "",
-      });
+    if (open && initialData) {
+      setFormData(initialData);
+    } else if (!open) {
+      setFormData(initialFormData);
     }
-  }, [open, initialData]);
+  }, [open, initialData, initialFormData]);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/energy-review?type=devices");
+        if (!response.ok) {
+          throw new Error("Failed to fetch devices");
+        }
+        const data = await response.json();
+        setDevices(data.devices || []);
+        setSelectedDevices({});
+        setSelectAll(false);
+      } catch (error) {
+        console.error("Error fetching devices:", error);
+        setDevices([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (mode === "create") {
+      fetchDevices();
+    }
+  }, [mode]);
+
+  const handleInputChange = useCallback(
+    (field: keyof typeof formData) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData((prev) => ({
+          ...prev,
+          [field]: e.target.value,
+        }));
+      },
+    []
+  );
 
   const handleSubmit = async () => {
-    await onSubmit(formData);
-    onOpenChange(false);
+    try {
+      if (mode === "create") {
+        const selectedDeviceIds = Object.entries(selectedDevices)
+          .filter(([_, isSelected]) => isSelected)
+          .map(([id]) => id);
+
+        if (selectedDeviceIds.length === 0) {
+          setError("請選擇至少一個設備");
+          return;
+        }
+
+        console.log("Mode:", mode);
+        console.log("Selected Device IDs:", selectedDeviceIds);
+        console.log("Selected Category:", selectedCategory);
+      } else {
+        if (!formData.name) {
+          setError("請填寫名稱");
+          return;
+        }
+
+        console.log("Mode:", mode);
+        console.log("Form Data:", formData);
+      }
+
+      onOpenChange(false);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "發生未知錯誤");
+    }
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setSelectedDevices({});
+    setSelectAll(false);
+  };
+
+  const handleSelectAll = () => {
+    const newSelectAll = !selectAll;
+    setSelectAll(newSelectAll);
+
+    const newSelection: DeviceSelection = {};
+    devices
+      .filter(
+        (device) => !selectedCategory || device.category === selectedCategory
+      )
+      .forEach((device) => {
+        newSelection[device.id] = newSelectAll;
+      });
+    setSelectedDevices(newSelection);
+  };
+
+  const handleDeviceSelect = (deviceId: string) => {
+    setSelectedDevices((prev) => ({
+      ...prev,
+      [deviceId]: !prev[deviceId],
+    }));
   };
 
   return (
@@ -87,20 +199,95 @@ export function DetailDialog({
               : "請修改以下設備資訊以更新項目。"}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="name" className="text-right">
-              名稱
-            </label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="col-span-3"
-            />
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-md mb-4">
+            {error}
           </div>
+        )}
+
+        <div className="grid gap-4 py-4">
+          {mode === "create" ? (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right">設備類型</label>
+                <div className="col-span-3">
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={handleCategoryChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="選擇設備類型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="生產設備">生產設備</SelectItem>
+                      <SelectItem value="非生產設備">非生產設備</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right">設備名稱</label>
+                <div className="col-span-3 border rounded-md p-2 max-h-60 overflow-y-auto">
+                  <div className="flex items-center gap-2 p-2 border-b">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4"
+                    />
+                    <span>全選</span>
+                  </div>
+                  {devices.length === 0 && isLoading ? (
+                    <div className="text-center py-4 text-gray-500">
+                      載入中...
+                    </div>
+                  ) : devices.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      沒有可用的設備
+                    </div>
+                  ) : (
+                    devices
+                      .filter(
+                        (device) =>
+                          !selectedCategory ||
+                          device.category === selectedCategory
+                      )
+                      .map((device) => (
+                        <div
+                          key={device.id}
+                          className={`flex items-center gap-2 p-2 hover:bg-blue-50 ${
+                            selectedDevices[device.id] ? "bg-blue-100" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedDevices[device.id] || false}
+                            onChange={() => handleDeviceSelect(device.id)}
+                            className="w-4 h-4"
+                          />
+                          <span>{device.name}</span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="name" className="text-right">
+                名稱
+              </label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={handleInputChange("name")}
+                className="col-span-3"
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="type" className="text-right">
               類型
@@ -108,9 +295,7 @@ export function DetailDialog({
             <Input
               id="type"
               value={formData.type}
-              onChange={(e) =>
-                setFormData({ ...formData, type: e.target.value })
-              }
+              onChange={handleInputChange("type")}
               className="col-span-3"
             />
           </div>
@@ -121,9 +306,7 @@ export function DetailDialog({
             <Input
               id="group"
               value={formData.group}
-              onChange={(e) =>
-                setFormData({ ...formData, group: e.target.value })
-              }
+              onChange={handleInputChange("group")}
               className="col-span-3"
             />
           </div>
@@ -134,9 +317,7 @@ export function DetailDialog({
             <Input
               id="area"
               value={formData.area}
-              onChange={(e) =>
-                setFormData({ ...formData, area: e.target.value })
-              }
+              onChange={handleInputChange("area")}
               className="col-span-3"
             />
           </div>
@@ -147,9 +328,7 @@ export function DetailDialog({
             <Input
               id="department"
               value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
+              onChange={handleInputChange("department")}
               className="col-span-3"
             />
           </div>
@@ -161,9 +340,7 @@ export function DetailDialog({
               id="workHours"
               type="number"
               value={formData.workHours}
-              onChange={(e) =>
-                setFormData({ ...formData, workHours: Number(e.target.value) })
-              }
+              onChange={handleInputChange("workHours")}
               className="col-span-3"
             />
           </div>
@@ -175,40 +352,31 @@ export function DetailDialog({
               id="workDays"
               type="number"
               value={formData.workDays}
-              onChange={(e) =>
-                setFormData({ ...formData, workDays: Number(e.target.value) })
-              }
+              onChange={handleInputChange("workDays")}
               className="col-span-3"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="dailyHours" className="text-right">
-              每日時數
+            <label htmlFor="loadFactor" className="text-right">
+              負載係數
             </label>
             <Input
-              id="dailyHours"
+              id="loadFactor"
               type="number"
-              value={formData.dailyHours}
-              onChange={(e) =>
-                setFormData({ ...formData, dailyHours: Number(e.target.value) })
-              }
+              value={formData.loadFactor}
+              onChange={handleInputChange("loadFactor")}
               className="col-span-3"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="workingDays" className="text-right">
-              工作天數
+            <label htmlFor="quantity" className="text-right">
+              數量
             </label>
             <Input
-              id="workingDays"
+              id="quantity"
               type="number"
-              value={formData.workingDays}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  workingDays: Number(e.target.value),
-                })
-              }
+              value={formData.quantity}
+              onChange={handleInputChange("quantity")}
               className="col-span-3"
             />
           </div>
@@ -220,9 +388,7 @@ export function DetailDialog({
               id="totalHours"
               type="number"
               value={formData.totalHours}
-              onChange={(e) =>
-                setFormData({ ...formData, totalHours: Number(e.target.value) })
-              }
+              onChange={handleInputChange("totalHours")}
               className="col-span-3"
             />
           </div>
@@ -234,9 +400,7 @@ export function DetailDialog({
               id="kwPerHour"
               type="number"
               value={formData.kwPerHour}
-              onChange={(e) =>
-                setFormData({ ...formData, kwPerHour: Number(e.target.value) })
-              }
+              onChange={handleInputChange("kwPerHour")}
               className="col-span-3"
             />
           </div>
@@ -248,12 +412,7 @@ export function DetailDialog({
               id="actualEnergy"
               type="number"
               value={formData.actualEnergy}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  actualEnergy: Number(e.target.value),
-                })
-              }
+              onChange={handleInputChange("actualEnergy")}
               className="col-span-3"
             />
           </div>
@@ -265,12 +424,7 @@ export function DetailDialog({
               id="actualConsumption"
               type="number"
               value={formData.actualConsumption}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  actualConsumption: Number(e.target.value),
-                })
-              }
+              onChange={handleInputChange("actualConsumption")}
               className="col-span-3"
             />
           </div>
@@ -278,76 +432,90 @@ export function DetailDialog({
             <label htmlFor="startDate" className="text-right">
               開始日期
             </label>
-            <Input
-              id="startDate"
-              type="date"
-              value={formData.startDate}
-              onChange={(e) =>
-                setFormData({ ...formData, startDate: e.target.value })
-              }
-              className="col-span-3 date-input"
-              onClick={(e) => {
-                if (e.target instanceof HTMLInputElement) {
-                  e.target.showPicker();
+            <div className="col-span-3">
+              <DatePicker
+                value={formData.startDate}
+                onChange={(value) =>
+                  setFormData({ ...formData, startDate: value })
                 }
-              }}
-            />
+                label="開始日期"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="endDate" className="text-right">
               結束日期
             </label>
-            <Input
-              id="endDate"
-              type="date"
-              value={formData.endDate}
-              onChange={(e) =>
-                setFormData({ ...formData, endDate: e.target.value })
-              }
-              className="col-span-3 date-input"
-              onClick={(e) => {
-                if (e.target instanceof HTMLInputElement) {
-                  e.target.showPicker();
+            <div className="col-span-3">
+              <DatePicker
+                value={formData.endDate}
+                onChange={(value) =>
+                  setFormData({ ...formData, endDate: value })
                 }
-              }}
-            />
+                label="結束日期"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="dataQuality" className="text-right">
               數據品質
             </label>
-            <Input
-              id="dataQuality"
-              type="number"
-              value={formData.dataQuality}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  dataQuality: Number(e.target.value),
-                })
-              }
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <Select
+                value={formData.dataQuality?.toString() || ""}
+                onValueChange={(value: string) =>
+                  setFormData({
+                    ...formData,
+                    dataQuality: parseInt(value) as DataQuality,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="選擇數據品質" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATA_QUALITY_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option.toString()}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="performanceEvaluation" className="text-right">
               績效評估
             </label>
-            <Input
-              id="performanceEvaluation"
-              value={formData.performanceEvaluation}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  performanceEvaluation: e.target.value,
-                })
-              }
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <Select
+                value={formData.performanceEvaluation}
+                onValueChange={(value: PerformanceEvaluation) =>
+                  setFormData({ ...formData, performanceEvaluation: value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="選擇績效評估" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERFORMANCE_EVALUATION_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setError(null);
+              onOpenChange(false);
+            }}
+          >
             取消
           </Button>
           <Button onClick={handleSubmit}>保存</Button>
