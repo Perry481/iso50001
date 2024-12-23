@@ -396,7 +396,7 @@ body.sidebar-mini {
   width: 250px;
   height: 100vh;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 1100;
   transition: width 0.3s ease-in-out;
 }
 
@@ -426,7 +426,7 @@ body.sidebar-mini {
   right: 0;
   left: 0;
   height: 57px;
-  z-index: 1000;
+  z-index: 1200; /* Increased z-index to be above sidebar */
 }
 
 /* Sidebar scroll area */
@@ -435,6 +435,7 @@ body.sidebar-mini {
   overflow-y: auto;
   overflow-x: hidden;
   padding-bottom: 1rem;
+  pointer-events: auto;
 }
 
 /* Collapsed sidebar state */
@@ -448,6 +449,7 @@ body.sidebar-collapse .content-wrapper {
 
 .sidebar-mini.sidebar-collapse .main-sidebar:hover {
   width: 250px;
+  z-index: 1100;
 }
 
 /* Add these styles to your existing DialogContent styles section */
@@ -511,4 +513,42 @@ body.sidebar-collapse .content-wrapper {
   border-color: #d1d5db !important;
   border-width: 1px !important;
   border-style: solid !important;
+}
+
+/* Handle overlay for mobile */
+@media (max-width: 991.98px) {
+  .sidebar-open::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1090;
+  }
+}
+
+/* Add styles for the burger menu button */
+.nav-link[data-widget="pushmenu"] {
+  z-index: 1300; /* Ensure burger menu is always clickable */
+  position: relative;
+}
+
+/* Add backdrop for sidebar when opened */
+.sidebar-mini.sidebar-open::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  cursor: pointer;
+}
+
+/* Ensure sidebar content stays above backdrop */
+.sidebar-mini.sidebar-open .main-sidebar {
+  z-index: 1150;
 }

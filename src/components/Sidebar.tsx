@@ -32,8 +32,25 @@ const Sidebar = () => {
     if (typeof window !== "undefined" && window.$) {
       try {
         window.$('[data-widget="treeview"]').Treeview("init");
+
+        // Add click handler for backdrop
+        document.addEventListener("click", (e) => {
+          const target = e.target as HTMLElement;
+          const sidebar = document.querySelector(".main-sidebar");
+          const burgerMenu = document.querySelector('[data-widget="pushmenu"]');
+
+          // If clicking outside sidebar and burger menu, and sidebar is open
+          if (
+            document.body.classList.contains("sidebar-open") &&
+            !sidebar?.contains(target) &&
+            !burgerMenu?.contains(target)
+          ) {
+            // Trigger click on burger menu to close sidebar
+            (burgerMenu as HTMLElement)?.click();
+          }
+        });
       } catch (error) {
-        console.error("Failed to initialize Treeview:", error);
+        console.error("Failed to initialize:", error);
       }
     }
   }, []);
