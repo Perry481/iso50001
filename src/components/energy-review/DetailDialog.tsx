@@ -130,7 +130,7 @@ export function DetailDialog({
     try {
       if (mode === "create") {
         const selectedDeviceIds = Object.entries(selectedDevices)
-          .filter(([_, isSelected]) => isSelected)
+          .filter(([, isSelected]) => isSelected) // Changed from [_, isSelected] to [, isSelected]
           .map(([id]) => id);
 
         if (selectedDeviceIds.length === 0) {
@@ -138,17 +138,24 @@ export function DetailDialog({
           return;
         }
 
-        console.log("Mode:", mode);
-        console.log("Selected Device IDs:", selectedDeviceIds);
-        console.log("Selected Category:", selectedCategory);
+        // Create details for each selected device
+        for (const deviceId of selectedDeviceIds) {
+          const device = devices.find((d) => d.id === deviceId);
+          if (device) {
+            const detailData = {
+              ...formData,
+              name: device.name,
+              type: device.category === "生產設備" ? "生產設備" : "公用設備",
+            };
+            await onSubmit(detailData);
+          }
+        }
       } else {
         if (!formData.name) {
           setError("請填寫名稱");
           return;
         }
-
-        console.log("Mode:", mode);
-        console.log("Form Data:", formData);
+        await onSubmit(formData);
       }
 
       onOpenChange(false);
@@ -438,7 +445,6 @@ export function DetailDialog({
                 onChange={(value) =>
                   setFormData({ ...formData, startDate: value })
                 }
-                label="開始日期"
               />
             </div>
           </div>
@@ -452,7 +458,6 @@ export function DetailDialog({
                 onChange={(value) =>
                   setFormData({ ...formData, endDate: value })
                 }
-                label="結束日期"
               />
             </div>
           </div>

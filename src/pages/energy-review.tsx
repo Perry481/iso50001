@@ -85,10 +85,6 @@ export default function EnergyECF() {
     null
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
 
   const handleCompressView = () => {
     setColumnWidth((prev) => Math.max(MIN_COLUMN_WIDTH, prev - ZOOM_STEP));
@@ -104,7 +100,7 @@ export default function EnergyECF() {
         accessorKey: "name",
         header: "設備名稱",
         size: columnWidth + 30,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="設備名稱" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>設備名稱</span>
@@ -116,7 +112,7 @@ export default function EnergyECF() {
         accessorKey: "type",
         header: "設備類型",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="設備類型" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>設備類型</span>
@@ -128,7 +124,7 @@ export default function EnergyECF() {
         accessorKey: "group",
         header: "群組",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="群組" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>群組</span>
@@ -140,7 +136,7 @@ export default function EnergyECF() {
         accessorKey: "area",
         header: "場域",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="場域" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>場域</span>
@@ -152,7 +148,7 @@ export default function EnergyECF() {
         accessorKey: "department",
         header: "部門",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="部門" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>部門</span>
@@ -164,7 +160,7 @@ export default function EnergyECF() {
         accessorKey: "workHours",
         header: "每日時數",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="每日時數" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>每日時數</span>
@@ -180,7 +176,7 @@ export default function EnergyECF() {
         accessorKey: "workDays",
         header: "工作天數",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="工作天數" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>工作天數</span>
@@ -196,7 +192,7 @@ export default function EnergyECF() {
         accessorKey: "loadFactor",
         header: "負載係數",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="負載係數" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>負載係數</span>
@@ -212,7 +208,7 @@ export default function EnergyECF() {
         accessorKey: "quantity",
         header: "數量",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="數量" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>數量</span>
@@ -228,7 +224,7 @@ export default function EnergyECF() {
         accessorKey: "totalHours",
         header: "總時數",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="總時數" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>總時數</span>
@@ -244,7 +240,7 @@ export default function EnergyECF() {
         accessorKey: "kwPerHour",
         header: "kW/Hour",
         size: columnWidth + 40,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="kW/Hour" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>kW/Hour</span>
@@ -260,7 +256,7 @@ export default function EnergyECF() {
         accessorKey: "actualEnergy",
         header: "實際能耗",
         size: columnWidth + 20,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="實際能耗" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>實際能耗</span>
@@ -276,7 +272,7 @@ export default function EnergyECF() {
         accessorKey: "actualConsumption",
         header: "能耗(度)",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="能耗(度)" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>能耗(度)</span>
@@ -292,7 +288,7 @@ export default function EnergyECF() {
         accessorKey: "startDate",
         header: "開始日期",
         size: columnWidth + 20,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="開始日期" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>開始日期</span>
@@ -304,7 +300,7 @@ export default function EnergyECF() {
         accessorKey: "endDate",
         header: "結束日期",
         size: columnWidth + 20,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="結束日期" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>結束日期</span>
@@ -316,7 +312,7 @@ export default function EnergyECF() {
         accessorKey: "dataQuality",
         header: "數據品質",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="數據品質" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>數據品質</span>
@@ -328,7 +324,7 @@ export default function EnergyECF() {
         accessorKey: "performanceEvaluation",
         header: "績效評估",
         size: columnWidth,
-        Header: ({ column }) => (
+        Header: () => (
           <Tooltip title="績效評估" {...tooltipProps}>
             <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
               <span>績效評估</span>

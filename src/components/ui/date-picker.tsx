@@ -1,12 +1,9 @@
-import { memo } from "react";
-
 type DatePickerProps = {
   value: string;
   onChange: (value: string) => void;
-  label?: string;
 };
 
-export function DatePicker({ value, onChange, label }: DatePickerProps) {
+export function DatePicker({ value, onChange }: DatePickerProps) {
   return (
     <input
       type="date"

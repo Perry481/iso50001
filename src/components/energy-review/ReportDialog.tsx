@@ -108,7 +108,6 @@ export function ReportDialog({
                 onChange={(value) =>
                   setFormData({ ...formData, startDate: value })
                 }
-                label="開始日期"
               />
             </div>
           </div>
@@ -122,7 +121,6 @@ export function ReportDialog({
                 onChange={(value) =>
                   setFormData({ ...formData, endDate: value })
                 }
-                label="結束日期"
               />
             </div>
           </div>

@@ -9,11 +9,11 @@ const nextConfig: NextConfig = {
     // Number of pages that should be kept simultaneously without being disposed
     pagesBufferLength: 2,
   },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
+  // eslint: {
+  //   // Warning: This allows production builds to successfully complete even if
+  //   // your project has ESLint errors.
+  //   ignoreDuringBuilds: true,
+  // },
 };
 
 export default nextConfig;
