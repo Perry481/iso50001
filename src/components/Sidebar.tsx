@@ -144,9 +144,9 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/site-settings"
+                  href="/area-settings"
                   className={`nav-link ${
-                    pathname === "/site-settings" ? "active" : ""
+                    pathname === "/area-settings" ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-map-marker-alt"></i>

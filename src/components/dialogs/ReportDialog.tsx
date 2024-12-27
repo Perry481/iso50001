@@ -8,10 +8,16 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useState, useEffect } from "react";
-import type { Report } from "../../lib/energy-review/types";
 import { DatePicker } from "../ui/date-picker";
 
-// Define ReportFormData type
+export interface Report {
+  id?: string | number;
+  title: string;
+  reviewerId: string;
+  startDate: string;
+  endDate: string;
+}
+
 type ReportFormData = {
   title: string;
   reviewerId: string;

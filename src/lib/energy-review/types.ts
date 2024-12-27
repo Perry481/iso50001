@@ -1,4 +1,6 @@
 // src/lib/energy-ecf/types.ts
+import { MRT_RowData } from "material-react-table";
+
 export type Report = {
   title: string;
   reviewerId: string;
@@ -6,7 +8,7 @@ export type Report = {
   endDate: string;
 };
 
-export interface Detail {
+export interface Detail extends MRT_RowData {
   id: number;
   name: string;
   type: string;

@@ -1,37 +1,63 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Report } from "@/lib/energy-review/types";
 
-interface PaginatedReportsProps {
-  reports: Report[];
-  onReportClick: (report: Report) => void;
-  onEditReport: (report: Report) => void;
-  onDeleteReport: (report: Report) => void;
-  onAddReport: () => void;
-  currentPage: number;
-  onPageChange: (page: number) => void;
+interface BaseItem {
+  id?: number | string;
+  title: string;
 }
 
-const PaginatedReports = ({
-  reports,
-  onReportClick,
-  onEditReport,
-  onDeleteReport,
-  onAddReport,
+interface ListingPageProps<T extends BaseItem> {
+  items: T[];
+  title: string;
+  itemsPerPage?: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  onItemClick: (item: T) => void;
+  onEditItem: (item: T) => void;
+  onDeleteItem: (item: T) => void;
+  onAddItem: () => void;
+  addButtonText?: string;
+  renderItemContent?: (item: T) => React.ReactNode;
+}
+
+export function ListingPage<T extends BaseItem>({
+  items,
+  title,
+  itemsPerPage = 4,
   currentPage,
   onPageChange,
-}: PaginatedReportsProps) => {
-  const reportsPerPage = 4;
-  const totalPages = Math.ceil(reports.length / reportsPerPage);
-  const startIndex = (currentPage - 1) * reportsPerPage;
-  const endIndex = startIndex + reportsPerPage;
-  const currentReports = reports.slice(startIndex, endIndex);
+  onItemClick,
+  onEditItem,
+  onDeleteItem,
+  onAddItem,
+  addButtonText = "新增",
+  renderItemContent,
+}: ListingPageProps<T>) {
+  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = items.slice(startIndex, endIndex);
+
+  const defaultRenderItemContent = (item: T) => (
+    <>
+      <h3 className="font-semibold text-lg text-gray-900">{item.title}</h3>
+      {Object.entries(item)
+        .filter(([key]) => !["id", "title"].includes(key))
+        .map(([key, value]) => (
+          <p key={key} className="text-gray-500 text-sm">
+            {key}: {value}
+          </p>
+        ))}
+    </>
+  );
+
+  const actualRenderItemContent = renderItemContent || defaultRenderItemContent;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl">報告列表</h2>
+        <h2 className="text-xl">{title}</h2>
         {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <Button
@@ -61,31 +87,21 @@ const PaginatedReports = ({
         )}
         <Button
           className="bg-green-500 hover:bg-green-600 text-white"
-          onClick={onAddReport}
+          onClick={onAddItem}
         >
-          <Plus className="h-4 w-4 mr-2" /> 新增報告
+          <Plus className="h-4 w-4 mr-2" /> {addButtonText}
         </Button>
       </div>
 
       <div className="space-y-2">
-        {currentReports.map((report) => (
+        {currentItems.map((item) => (
           <div
-            key={report.title}
+            key={item.id || item.title}
             className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:outline hover:outline-1 hover:outline-blue-500 cursor-pointer"
-            onClick={() => onReportClick(report)}
+            onClick={() => onItemClick(item)}
           >
             <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <h3 className="font-semibold text-lg text-gray-900">
-                  {report.title}
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  {report.startDate} - {report.endDate}
-                </p>
-                <p className="text-gray-500 text-sm">
-                  審查人員: {report.reviewerId}
-                </p>
-              </div>
+              <div className="space-y-1">{actualRenderItemContent(item)}</div>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
@@ -93,7 +109,7 @@ const PaginatedReports = ({
                   className="hover:bg-blue-50"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEditReport(report);
+                    onEditItem(item);
                   }}
                 >
                   <Pencil className="h-4 w-4 text-blue-500" />
@@ -104,7 +120,7 @@ const PaginatedReports = ({
                   className="hover:bg-red-50"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteReport(report);
+                    onDeleteItem(item);
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -116,6 +132,4 @@ const PaginatedReports = ({
       </div>
     </div>
   );
-};
-
-export default PaginatedReports;
+}

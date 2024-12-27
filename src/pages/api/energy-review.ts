@@ -311,7 +311,7 @@ export const mockDetails: Record<string, Detail[]> = {
     {
       id: 18,
       name: "23 電鍍線-2",
-      type: "生產設備",
+      type: "生產設��",
       group: "電鍍設備",
       area: "總廠",
       department: "",
