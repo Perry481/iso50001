@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,6 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { useState, useEffect } from "react";
 import { DatePicker } from "../ui/date-picker";
 import {
   Select,
@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { DeviceReferenceDialog } from "./DeviceReferenceDialog";
+import { type DeviceReference } from "../../pages/api/energy-equipment";
 
 export type FieldType = "text" | "number" | "date" | "select";
 
@@ -43,6 +45,7 @@ interface DetailDialogProps<T extends { id?: string | number }> {
   title: string;
   description: string;
   fields: Field[];
+  showDeviceReference?: boolean;
 }
 
 type FormDataType = Record<string, string | number>;
@@ -56,9 +59,11 @@ export function DetailDialog<T extends { id?: string | number }>({
   title,
   description,
   fields,
+  showDeviceReference = false,
 }: DetailDialogProps<T>) {
   const [formData, setFormData] = useState<FormDataType>({});
   const [error, setError] = useState<string | null>(null);
+  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && initialData) {
@@ -119,14 +124,44 @@ export function DetailDialog<T extends { id?: string | number }>({
     }
   };
 
-  const handleClose = () => {
-    setError(null);
-    onOpenChange(false);
+  const handleDeviceSelect = (device: DeviceReference) => {
+    setFormData((prev) => ({
+      ...prev,
+      code: device.MachineID,
+      referenceCode: device.MachineID,
+      name: device.MachineName,
+      ratedPower: device.KWHour || 0,
+      powerUnit: "度",
+    }));
   };
 
   const renderField = (field: Field) => {
     const { key, label, type, options, placeholder } = field;
 
+    // Special handling for code field (設備編號)
+    if (key === "code" && showDeviceReference) {
+      return (
+        <div className="col-span-3 flex gap-2">
+          <Input
+            id={key}
+            type={type}
+            value={formData[key]?.toString() || ""}
+            onChange={handleInputChange(key, type)}
+            className="flex-1"
+            placeholder={placeholder}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setDeviceDialogOpen(true)}
+          >
+            選擇
+          </Button>
+        </div>
+      );
+    }
+
+    // Handle other fields normally
     switch (type) {
       case "date":
         return (
@@ -178,46 +213,54 @@ export function DetailDialog<T extends { id?: string | number }>({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto DialogContent">
-        <DialogHeader>
-          <DialogTitle className="DialogTitle">
-            {mode === "create" ? `新增${title}` : `編輯${title}`}
-          </DialogTitle>
-          <DialogDescription className="DialogDescription">
-            {mode === "create"
-              ? `請填寫以下資訊以新增${description}。`
-              : `請修改以下資訊以更新${description}。`}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto DialogContent">
+          <DialogHeader>
+            <DialogTitle className="DialogTitle">
+              {mode === "create" ? `新增${title}` : `編輯${title}`}
+            </DialogTitle>
+            <DialogDescription className="DialogDescription">
+              {mode === "create"
+                ? `請填寫以下資訊以新增${description}。`
+                : `請修改以下資訊以更新${description}。`}
+            </DialogDescription>
+          </DialogHeader>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-md mb-4">
-            {error}
-          </div>
-        )}
-
-        <div className="grid gap-4 py-4">
-          {fields.map((field) => (
-            <div
-              key={field.key}
-              className="grid grid-cols-4 items-center gap-4"
-            >
-              <label htmlFor={field.key} className="text-right">
-                {field.label}
-              </label>
-              {renderField(field)}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-md mb-4">
+              {error}
             </div>
-          ))}
-        </div>
+          )}
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={handleClose}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit}>保存</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="grid gap-4 py-4">
+            {fields.map((field) => (
+              <div
+                key={field.key}
+                className="grid grid-cols-4 items-center gap-4"
+              >
+                <label htmlFor={field.key} className="text-right">
+                  {field.label}
+                </label>
+                {renderField(field)}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSubmit}>保存</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <DeviceReferenceDialog
+        open={deviceDialogOpen}
+        onOpenChange={setDeviceDialogOpen}
+        onSelect={handleDeviceSelect}
+      />
+    </>
   );
 }
