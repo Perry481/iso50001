@@ -423,18 +423,17 @@ body.sidebar-mini {
 /* Wrapper container */
 .wrapper {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   overflow: hidden;
 }
 
 /* Main content wrapper positioning */
 .content-wrapper {
   margin-left: 250px;
-  margin-top: 57px;
-  min-height: calc(100vh - 57px);
+  padding-top: 57px;
+  height: calc(100vh - 57px);
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   transition: margin-left 0.3s ease-in-out;
   position: relative;
   padding-bottom: 0.5rem;
@@ -456,7 +455,7 @@ body.sidebar-mini {
 /* Main content area */
 .main-content {
   padding: 0.75rem 1rem;
-  min-height: 100%;
+  min-height: fit-content;
   box-sizing: border-box;
 }
 
