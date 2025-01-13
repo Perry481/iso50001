@@ -16,6 +16,13 @@ interface DataGridProps<T extends MRT_RowData> {
   onDelete?: (row: T) => void;
   title?: string;
   onBack?: () => void;
+  initialState?: {
+    pagination?: {
+      pageSize?: number;
+      pageIndex?: number;
+    };
+    density?: "compact" | "comfortable" | "spacious";
+  };
 }
 
 export function DataGrid<T extends MRT_RowData>({
@@ -26,6 +33,7 @@ export function DataGrid<T extends MRT_RowData>({
   onDelete,
   title,
   onBack,
+  initialState,
 }: DataGridProps<T>) {
   const BASE_COLUMN_WIDTH = 110;
   const MIN_COLUMN_WIDTH = 55;
@@ -75,7 +83,6 @@ export function DataGrid<T extends MRT_RowData>({
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">
-          {title && <h1 className="text-xl font-semibold">{title}</h1>}
           {onBack && (
             <Button
               variant="outline"
@@ -85,6 +92,7 @@ export function DataGrid<T extends MRT_RowData>({
               返回列表
             </Button>
           )}
+          {title && <h1 className="text-xl font-semibold">{title}</h1>}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -150,10 +158,10 @@ export function DataGrid<T extends MRT_RowData>({
           }}
           initialState={{
             pagination: {
-              pageSize: 10,
-              pageIndex: 0,
+              pageSize: Number(initialState?.pagination?.pageSize) || 10,
+              pageIndex: Number(initialState?.pagination?.pageIndex) || 0,
             },
-            density: "compact",
+            density: initialState?.density ?? "compact",
           }}
           muiTablePaperProps={{
             sx: {

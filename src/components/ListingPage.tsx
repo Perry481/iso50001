@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface BaseItem {
+export interface BaseItem {
   id?: number | string;
   title: string;
 }
