@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { type MRT_ColumnDef } from "material-react-table";
 import { DataGrid } from "../components/DataGrid";
 import Tooltip from "@mui/material/Tooltip";
 import { DetailDialog, type Field } from "../components/dialogs/DetailDialog";
+import type { ECF } from "@/lib/energy-ecf/types";
+import { energyECFService } from "@/lib/energy-ecf/service";
 import {
   Dialog,
   DialogContent,
@@ -26,78 +28,6 @@ export interface EnergyUsage {
   meterNumber: string;
   note?: string;
 }
-
-const UNIT_OPTIONS = [
-  { value: "公升", label: "公升" },
-  { value: "度", label: "度" },
-];
-
-const CATEGORY_NAME_OPTIONS = [
-  { value: "燃料油", label: "燃料油" },
-  { value: "天然氣(NG)自產", label: "天然氣(NG)自產" },
-  { value: "液化石油氣(LPG)", label: "液化石油氣(LPG)" },
-  { value: "車用汽油", label: "車用汽油" },
-  { value: "柴油", label: "柴油" },
-  { value: "台電電力", label: "台電電力" },
-];
-
-const fields: Field[] = [
-  {
-    key: "name",
-    label: "使用名稱",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "categoryCode",
-    label: "類別代碼",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "categoryName",
-    label: "類別名稱",
-    type: "select",
-    required: true,
-    options: CATEGORY_NAME_OPTIONS,
-  },
-  {
-    key: "startDate",
-    label: "啟始日期",
-    type: "date",
-    required: true,
-  },
-  {
-    key: "endDate",
-    label: "結束日期",
-    type: "date",
-    required: true,
-  },
-  {
-    key: "usage",
-    label: "使用量",
-    type: "number",
-    required: true,
-  },
-  {
-    key: "unit",
-    label: "單位",
-    type: "select",
-    required: true,
-    options: UNIT_OPTIONS,
-  },
-  {
-    key: "meterNumber",
-    label: "量表編號",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "note",
-    label: "備註",
-    type: "text",
-  },
-];
 
 const tooltipProps = {
   arrow: true,
@@ -141,144 +71,232 @@ export default function OrgEnergyUsage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<EnergyUsage | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<EnergyUsage | null>(null);
+  const [ecfs, setEcfs] = useState<ECF[]>([]);
 
   useEffect(() => {
-    const loadRecords = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch("/api/org-energy-usage");
-        const data = await response.json();
-        setRecords(data.records);
+        // Load ECFs
+        const ecfData = await energyECFService.getECFs();
+        setEcfs(ecfData);
+
+        // Load records
+        const recordsResponse = await fetch("/api/org-energy-usage");
+        const recordsData = await recordsResponse.json();
+        setRecords(recordsData.records);
       } catch (error) {
-        console.error("Failed to load records:", error);
+        console.error("Failed to load data:", error);
       }
     };
 
-    loadRecords();
+    loadData();
   }, []);
 
-  const columns = useMemo<MRT_ColumnDef<EnergyUsage>[]>(
-    () => [
-      {
-        accessorKey: "name",
-        header: "使用名稱",
-        size: 200,
-        Header: () => (
-          <Tooltip title="使用名稱" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>使用名稱</span>
-            </div>
-          </Tooltip>
-        ),
+  const fields: Field[] = [
+    {
+      key: "name",
+      label: "使用名稱",
+      type: "text",
+      required: true,
+    },
+    {
+      key: "categoryCode",
+      label: "類別代碼",
+      type: "text",
+      required: true,
+      disabled: true,
+    },
+    {
+      key: "categoryName",
+      label: "類別名稱",
+      type: "select",
+      required: true,
+      options: ecfs.map((ecf) => ({
+        value: ecf.name,
+        label: ecf.name,
+      })),
+      onChange: (value: string) => {
+        const selectedEcf = ecfs.find((ecf) => ecf.name === value);
+        if (selectedEcf) {
+          setEditingRecord((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  categoryName: selectedEcf.name,
+                  categoryCode: selectedEcf.code,
+                  unit: selectedEcf.unit,
+                }
+              : undefined
+          );
+        }
       },
-      {
-        accessorKey: "categoryCode",
-        header: "類別代碼",
-        size: 110,
-        Header: () => (
-          <Tooltip title="類別代碼" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>類別代碼</span>
-            </div>
-          </Tooltip>
-        ),
+    },
+    {
+      key: "startDate",
+      label: "啟始日期",
+      type: "date",
+      required: true,
+    },
+    {
+      key: "endDate",
+      label: "結束日期",
+      type: "date",
+      required: true,
+    },
+    {
+      key: "usage",
+      label: "使用量",
+      type: "number",
+      required: true,
+    },
+    {
+      key: "unit",
+      label: "單位",
+      type: "text",
+      required: true,
+      disabled: true,
+    },
+    {
+      key: "meterNumber",
+      label: "量表編號",
+      type: "text",
+      required: true,
+    },
+    {
+      key: "note",
+      label: "備註",
+      type: "text",
+    },
+  ];
+
+  const columns: MRT_ColumnDef<EnergyUsage>[] = [
+    {
+      accessorKey: "name",
+      header: "使用名稱",
+      size: 200,
+      Header: () => (
+        <Tooltip title="使用名稱" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>使用名稱</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "categoryCode",
+      header: "類別代碼",
+      size: 110,
+      Header: () => (
+        <Tooltip title="類別代碼" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>類別代碼</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "categoryName",
+      header: "類別名稱",
+      size: 110,
+      Header: () => (
+        <Tooltip title="類別名稱" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>類別名稱</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "startDate",
+      header: "啟始日期",
+      size: 130,
+      Header: () => (
+        <Tooltip title="啟始日期" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>啟始日期</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "endDate",
+      header: "結束日期",
+      size: 130,
+      Header: () => (
+        <Tooltip title="結束日期" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>結束日期</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "usage",
+      header: "使用量",
+      size: 110,
+      Header: () => (
+        <Tooltip title="使用量" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>使用量</span>
+          </div>
+        </Tooltip>
+      ),
+      Cell: ({ cell }) => {
+        const value = cell.getValue<number>();
+        return value ? value.toFixed(2) : "-";
       },
-      {
-        accessorKey: "categoryName",
-        header: "類別名稱",
-        size: 110,
-        Header: () => (
-          <Tooltip title="類別名稱" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>類別名稱</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "startDate",
-        header: "啟始日期",
-        size: 130,
-        Header: () => (
-          <Tooltip title="啟始日期" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>啟始日期</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "endDate",
-        header: "結束日期",
-        size: 130,
-        Header: () => (
-          <Tooltip title="結束日期" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>結束日期</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "usage",
-        header: "使用量",
-        size: 110,
-        Header: () => (
-          <Tooltip title="使用量" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>使用量</span>
-            </div>
-          </Tooltip>
-        ),
-        Cell: ({ cell }) => {
-          const value = cell.getValue<number>();
-          return value ? value.toFixed(2) : "-";
-        },
-      },
-      {
-        accessorKey: "unit",
-        header: "單位",
-        size: 80,
-        Header: () => (
-          <Tooltip title="單位" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>單位</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "meterNumber",
-        header: "量表編號",
-        size: 130,
-        Header: () => (
-          <Tooltip title="量表編號" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>量表編號</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "note",
-        header: "備��",
-        size: 200,
-        Header: () => (
-          <Tooltip title="備註" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>備註</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-    ],
-    []
-  );
+    },
+    {
+      accessorKey: "unit",
+      header: "單位",
+      size: 80,
+      Header: () => (
+        <Tooltip title="單位" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>單位</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "meterNumber",
+      header: "量表編號",
+      size: 130,
+      Header: () => (
+        <Tooltip title="量表編號" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>量表編號</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "note",
+      header: "備註",
+      size: 200,
+      Header: () => (
+        <Tooltip title="備註" {...tooltipProps}>
+          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+            <span>備註</span>
+          </div>
+        </Tooltip>
+      ),
+    },
+  ];
 
   const handleAdd = () => {
+    // Find default ECF (e.g., first in the list)
+    const defaultEcf = ecfs[0];
     setEditingRecord({
-      categoryCode: "401",
-      categoryName: "台電電力",
-    } as EnergyUsage);
+      name: "",
+      categoryCode: defaultEcf?.code || "",
+      categoryName: defaultEcf?.name || "",
+      startDate: "",
+      endDate: "",
+      usage: 0,
+      unit: defaultEcf?.unit || "",
+      meterNumber: "",
+    });
     setDialogOpen(true);
   };
 
@@ -292,12 +310,20 @@ export default function OrgEnergyUsage() {
   };
 
   const handleSubmit = async (data: Omit<EnergyUsage, "id">) => {
+    // Find the matching ECF to get all ECF data
+    const selectedEcf = ecfs.find((ecf) => ecf.code === data.categoryCode);
+    const submissionData = {
+      ...data,
+      categoryName: selectedEcf?.name || "",
+      unit: selectedEcf?.unit || "",
+    };
+
     try {
       const response = await fetch("/api/org-energy-usage", {
         method: editingRecord ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
+          ...submissionData,
           id: editingRecord?.id,
         }),
       });

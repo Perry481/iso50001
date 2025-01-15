@@ -7,166 +7,93 @@ interface ApiResponse {
   message?: string;
 }
 
-export const mockRecords: EnergyUsage[] = [
-  {
-    id: 1,
-    name: "公務車2021年汽油用量",
-    categoryCode: "104",
-    categoryName: "車用汽油",
-    startDate: "2021-01-01",
-    endDate: "2021-12-31",
-    usage: 18826,
-    unit: "公升",
-    meterNumber: "車用汽油油單",
-    note: "",
-  },
-  {
-    id: 2,
-    name: "公務車2022年汽油用量",
-    categoryCode: "104",
-    categoryName: "車用汽油",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-    usage: 20200.64,
-    unit: "公升",
-    meterNumber: "車用汽油油單",
-    note: "",
-  },
-  {
-    id: 3,
-    name: "公務車2021年柴油用量",
-    categoryCode: "105",
-    categoryName: "柴油",
-    startDate: "2021-01-01",
-    endDate: "2021-12-31",
-    usage: 1423,
-    unit: "公升",
-    meterNumber: "車用柴油油單",
-    note: "",
-  },
-  {
-    id: 4,
-    name: "公務車2022年柴油用量",
-    categoryCode: "105",
-    categoryName: "柴油",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-    usage: 1539.72,
-    unit: "公升",
-    meterNumber: "車用柴油油單",
-    note: "",
-  },
-  {
-    id: 5,
-    name: "總廠2021年用電",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2021-01-01",
-    endDate: "2021-12-31",
-    usage: 372280,
-    unit: "度",
-    meterNumber: "總廠電表",
-    note: "",
-  },
-  {
-    id: 6,
-    name: "總廠2022年用電",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-    usage: 318800,
-    unit: "度",
-    meterNumber: "總廠電表",
-    note: "",
-  },
-  {
-    id: 7,
-    name: "車用廠區2021年總用電",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2021-01-01",
-    endDate: "2021-12-31",
-    usage: 180640,
-    unit: "度",
-    meterNumber: "車用電表",
-    note: "",
-  },
-  {
-    id: 8,
-    name: "車用廠區2022年總用電",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-    usage: 189080,
-    unit: "度",
-    meterNumber: "車用電表",
-    note: "",
-  },
-  {
-    id: 9,
-    name: "中興廠區2022年總用電",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-    usage: 34400,
-    unit: "度",
-    meterNumber: "中興廠區電表",
-    note: "",
-  },
-  {
-    id: 10,
-    name: "2023年總廠總用電度數",
-    categoryCode: "401",
-    categoryName: "台電電力",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-    usage: 287283,
-    unit: "度",
-    meterNumber: "總廠電表",
-    note: "總廠總用電度數",
-  },
-];
+interface RawEnergyData {
+  ErSgt: number;
+  EnergyName: string;
+  EnergyCategoryID: string;
+  EnergyTypeID: string;
+  EnergyTypeName: string;
+  UnitName: string;
+  StartDate: string;
+  EndDate: string;
+  KWMeterID: string;
+  Quantity: number;
+  Remark: string;
+  CreatedTime: string;
+  UpdatedTime: string;
+}
 
-export default function handler(
+// Helper function to convert /Date(timestamp)/ to YYYY-MM-DD
+function convertDateFormat(dateString: string): string {
+  const timestamp = parseInt(
+    dateString.replace("/Date(", "").replace(")/", "")
+  );
+  return new Date(timestamp).toISOString().split("T")[0];
+}
+
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
-  const { method, query } = req;
+  const { method } = req;
 
   switch (method) {
     case "GET":
-      return res.status(200).json({ records: mockRecords });
+      try {
+        const response = await fetch(
+          "http://192.168.0.55:8080/SystemOptions/GetEnergyList.ashx?categoryid&_search=false&rows=50&page=1&sidx=ErSgt&sord=asc",
+          {
+            method: "GET",
+            headers: {
+              Accept: "*/*",
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Transform the data to match our format
+        const records: EnergyUsage[] = data.rows.map((item: RawEnergyData) => ({
+          id: item.ErSgt,
+          name: item.EnergyName,
+          categoryCode: item.EnergyTypeID,
+          categoryName: item.EnergyTypeName,
+          startDate: convertDateFormat(item.StartDate),
+          endDate: convertDateFormat(item.EndDate),
+          usage: item.Quantity,
+          unit: item.UnitName,
+          meterNumber: item.KWMeterID.trim(),
+          note: item.Remark || "",
+        }));
+
+        return res.status(200).json({ records });
+      } catch (error) {
+        console.error("Failed to fetch records:", error);
+        return res.status(500).json({ message: "Failed to fetch records" });
+      }
 
     case "POST":
+      // TODO: Implement real API integration for POST
       const newRecord: EnergyUsage = {
         ...req.body,
-        id: mockRecords.length + 1,
+        id: Date.now(), // Temporary ID generation
       };
-      mockRecords.push(newRecord);
       return res.status(201).json({ record: newRecord });
 
     case "PUT":
+      // TODO: Implement real API integration for PUT
       const updatedRecord = req.body;
-      const index = mockRecords.findIndex((r) => r.id === updatedRecord.id);
-      if (index !== -1) {
-        mockRecords[index] = updatedRecord;
-        return res.status(200).json({ record: updatedRecord });
-      }
-      return res.status(404).json({ message: "Record not found" });
+      return res.status(200).json({ record: updatedRecord });
 
     case "DELETE":
-      const idToDelete = query.id;
-      const recordIndex = mockRecords.findIndex(
-        (r) => r.id === Number(idToDelete)
-      );
-      if (recordIndex !== -1) {
-        mockRecords.splice(recordIndex, 1);
-        return res.status(200).json({ message: "Record deleted successfully" });
-      }
-      return res.status(404).json({ message: "Record not found" });
+      // TODO: Implement real API integration for DELETE
+      return res.status(200).json({ message: "Record deleted successfully" });
 
     default:
       res.setHeader("Allow", ["GET", "POST", "PUT", "DELETE"]);

@@ -34,6 +34,8 @@ export interface Field {
   options?: SelectOption[];
   placeholder?: string;
   selectContentProps?: React.HTMLAttributes<HTMLDivElement>;
+  disabled?: boolean;
+  onChange?: (value: string) => void;
 }
 
 interface DetailDialogProps<T extends { id?: string | number }> {
@@ -102,6 +104,12 @@ export function DetailDialog<T extends { id?: string | number }>({
       ...prev,
       [key]: value,
     }));
+
+    // Call the field's onChange handler if it exists
+    const field = fields.find((f) => f.key === key);
+    if (field?.onChange) {
+      field.onChange(value);
+    }
   };
 
   const handleSubmit = async () => {
@@ -207,6 +215,7 @@ export function DetailDialog<T extends { id?: string | number }>({
             onChange={handleInputChange(key, type)}
             className="col-span-3"
             placeholder={placeholder}
+            disabled={field.disabled}
           />
         );
     }

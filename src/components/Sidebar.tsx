@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { WorkflowStepper } from "./WorkflowStepper";
 
 // Define jQuery interface
 interface JQuery {
@@ -80,6 +81,9 @@ const Sidebar = () => {
             </button>
           </li>
         </ul>
+        <div className="flex-grow-1">
+          <WorkflowStepper />
+        </div>
       </nav>
 
       {/* Main Sidebar Container - Update position and height */}
