@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { type DeviceReference } from "../../pages/api/energy-equipment";
+import type { DeviceReference } from "@/lib/device-reference/types";
+import { deviceReferenceService } from "@/lib/device-reference/service";
 import { Loader2 } from "lucide-react";
 
 interface DeviceReferenceDialogProps {
@@ -22,11 +23,8 @@ export function DeviceReferenceDialog({
     const loadDevices = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          "/api/energy-equipment?type=deviceReferences"
-        );
-        const data = await response.json();
-        setDevices(data.deviceReferences || []);
+        const devices = await deviceReferenceService.getDeviceReferences();
+        setDevices(devices);
       } catch (error) {
         console.error("Failed to load device references:", error);
         setDevices([]);

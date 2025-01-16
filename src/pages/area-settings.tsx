@@ -5,6 +5,7 @@ import { type MRT_ColumnDef } from "material-react-table";
 import { DataGrid } from "../components/DataGrid";
 import Tooltip from "@mui/material/Tooltip";
 import { DetailDialog, type Field } from "../components/dialogs/DetailDialog";
+import { deptListService } from "@/lib/dept-list/service";
 import {
   Dialog,
   DialogContent,
@@ -77,10 +78,9 @@ export default function AreaSettings() {
         const areasData = await areasResponse.json();
         setAreas(areasData.areas);
 
-        // Load department options
-        const deptResponse = await fetch("/api/area-settings?type=departments");
-        const deptData = await deptResponse.json();
-        setDepartmentOptions(deptData.departments);
+        // Load department options using the service
+        const depts = await deptListService.getDepts();
+        setDepartmentOptions(depts);
       } catch (error) {
         console.error("Failed to load data:", error);
       }

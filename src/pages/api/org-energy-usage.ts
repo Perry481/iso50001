@@ -41,7 +41,7 @@ export default async function handler(
     case "GET":
       try {
         const response = await fetch(
-          "http://192.168.0.55:8080/SystemOptions/GetEnergyList.ashx?categoryid&_search=false&rows=50&page=1&sidx=ErSgt&sord=asc",
+          "http://192.168.0.55:8080/SystemOptions/GetEnergyList.ashx?categoryid&_search=false&rows=10000&page=1&sidx=ErSgt&sord=asc",
           {
             method: "GET",
             headers: {

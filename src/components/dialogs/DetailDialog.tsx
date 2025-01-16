@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { DeviceReferenceDialog } from "./DeviceReferenceDialog";
-import { type DeviceReference } from "../../pages/api/energy-equipment";
+import type { DeviceReference } from "@/lib/device-reference/types";
 
 export type FieldType = "text" | "number" | "date" | "select";
 
@@ -100,16 +100,15 @@ export function DetailDialog<T extends { id?: string | number }>({
   };
 
   const handleSelectChange = (key: string) => (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-
-    // Call the field's onChange handler if it exists
-    const field = fields.find((f) => f.key === key);
-    if (field?.onChange) {
-      field.onChange(value);
-    }
+    setFormData((prev) => {
+      const field = fields.find((f) => f.key === key);
+      const updates = field?.onChange?.(value) || {};
+      return {
+        ...prev,
+        [key]: value,
+        ...updates,
+      };
+    });
   };
 
   const handleSubmit = async () => {

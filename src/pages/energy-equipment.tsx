@@ -14,14 +14,18 @@ import {
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import type { Equipment } from "./api/energy-equipment";
-import {
-  EQUIPMENT_TYPE_OPTIONS,
-  WORK_AREA_OPTIONS,
-  STATUS_OPTIONS,
-  USAGE_GROUP_OPTIONS,
-  MANUFACTURER_OPTIONS,
-} from "./api/energy-equipment";
-import { DEPARTMENT_OPTIONS } from "./api/area-settings";
+import { EQUIPMENT_TYPE_OPTIONS, STATUS_OPTIONS } from "./api/energy-equipment";
+import { WORK_AREA_OPTIONS } from "@/lib/area-settings/types";
+import { deptListService } from "@/lib/dept-list/service";
+import type { Dept } from "@/lib/dept-list/types";
+import { energySubjectService } from "@/lib/energy-subject/service";
+import { energyECFService } from "@/lib/energy-ecf/service";
+import type { ECF } from "@/lib/energy-ecf/types";
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
 const tooltipProps = {
   arrow: true,
@@ -67,6 +71,11 @@ export default function EnergyEquipment() {
     Equipment | undefined
   >();
   const [deleteConfirm, setDeleteConfirm] = useState<Equipment | null>(null);
+  const [departmentOptions, setDepartmentOptions] = useState<Dept[]>([]);
+  const [usageGroupOptions, setUsageGroupOptions] = useState<SelectOption[]>(
+    []
+  );
+  const [manufacturerOptions, setManufacturerOptions] = useState<ECF[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,12 +83,35 @@ export default function EnergyEquipment() {
         const response = await fetch("/api/energy-equipment");
         const data = await response.json();
         setEquipments(data.equipments);
+
+        const depts = await deptListService.getDepts();
+        setDepartmentOptions(depts);
+
+        const ecfs = await energyECFService.getECFs();
+        setManufacturerOptions(ecfs);
       } catch (error) {
         console.error("Failed to load data:", error);
       }
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const loadUsageGroups = async () => {
+      try {
+        const subjects = await energySubjectService.getSubjects();
+        const options = subjects.map((subject) => ({
+          value: subject.EnergyGroupName,
+          label: subject.EnergyGroupName,
+        }));
+        setUsageGroupOptions(options);
+      } catch (error) {
+        console.error("Failed to load usage groups:", error);
+      }
+    };
+
+    loadUsageGroups();
   }, []);
 
   const fields: Field[] = [
@@ -105,7 +137,19 @@ export default function EnergyEquipment() {
       label: "類別代碼",
       type: "select",
       required: true,
-      options: MANUFACTURER_OPTIONS,
+      options: manufacturerOptions.map((ecf) => ({
+        value: ecf.name,
+        label: `${ecf.name} (${ecf.code})`,
+      })),
+      onChange: (value: string): Record<string, string | number> => {
+        const ecf = manufacturerOptions.find((e) => e.name === value);
+        if (!ecf) return {};
+
+        return {
+          powerUnit: ecf.unit,
+          ratedPower: ecf.factor,
+        };
+      },
     },
     {
       key: "equipmentType",
@@ -126,7 +170,7 @@ export default function EnergyEquipment() {
       label: "部門",
       type: "select",
       required: true,
-      options: DEPARTMENT_OPTIONS,
+      options: departmentOptions,
       selectContentProps: {
         className: "max-h-[300px] overflow-y-auto",
       },
@@ -136,7 +180,7 @@ export default function EnergyEquipment() {
       label: "共用群組",
       type: "select",
       required: true,
-      options: USAGE_GROUP_OPTIONS,
+      options: usageGroupOptions,
       selectContentProps: {
         className: "max-h-[300px] overflow-y-auto",
       },
@@ -270,7 +314,9 @@ export default function EnergyEquipment() {
         ),
         Cell: ({ cell }) => {
           const value = cell.getValue<string>();
-          const option = DEPARTMENT_OPTIONS.find((opt) => opt.value === value);
+          const option = departmentOptions.find(
+            (opt: Dept) => opt.value === value
+          );
           return option ? option.label : value;
         },
       },
@@ -359,7 +405,7 @@ export default function EnergyEquipment() {
         ),
       },
     ],
-    []
+    [departmentOptions]
   );
 
   const handleAdd = () => {
