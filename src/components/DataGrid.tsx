@@ -16,6 +16,7 @@ interface DataGridProps<T extends MRT_RowData> {
   onDelete?: (row: T) => void;
   title?: string;
   onBack?: () => void;
+  expandableColumns?: string[];
   initialState?: {
     pagination?: {
       pageSize?: number;
@@ -33,6 +34,7 @@ export function DataGrid<T extends MRT_RowData>({
   onDelete,
   title,
   onBack,
+  expandableColumns = [],
   initialState,
 }: DataGridProps<T>) {
   const BASE_COLUMN_WIDTH = 110;
@@ -40,6 +42,9 @@ export function DataGrid<T extends MRT_RowData>({
   const MAX_COLUMN_WIDTH = 275;
   const ZOOM_STEP = 11;
   const [columnWidth, setColumnWidth] = useState(BASE_COLUMN_WIDTH);
+  const [expandedColumns, setExpandedColumns] = useState<
+    Record<string, boolean>
+  >({});
 
   const handleCompressView = () => {
     setColumnWidth((prev) => Math.max(MIN_COLUMN_WIDTH, prev - ZOOM_STEP));
@@ -55,8 +60,24 @@ export function DataGrid<T extends MRT_RowData>({
       columns.map((col) => ({
         ...col,
         size: columnWidth + (col.size ? col.size - BASE_COLUMN_WIDTH : 0),
+        muiTableBodyCellProps: {
+          sx: {
+            padding: expandedColumns[col.accessorKey as string]
+              ? "12px"
+              : "4px 12px",
+            borderRight: "1px solid #e2e8f0",
+            "&:last-child": {
+              borderRight: "1px solid #e2e8f0",
+            },
+            ...(expandedColumns[col.accessorKey as string] && {
+              maxWidth: "400px",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            }),
+          },
+        },
       })),
-    [columns, columnWidth]
+    [columns, columnWidth, expandedColumns]
   );
 
   // Create theme
@@ -78,6 +99,58 @@ export function DataGrid<T extends MRT_RowData>({
       },
     },
   });
+
+  const processColumns = useCallback(() => {
+    return columnsWithWidth().map((col) => ({
+      ...col,
+      Cell: ({
+        cell,
+      }: {
+        cell: { getValue: () => string | number | null | undefined };
+      }) => {
+        const value = cell.getValue();
+        const columnKey = col.accessorKey as string;
+        const isExpanded = expandedColumns[columnKey];
+
+        if (expandableColumns.includes(columnKey) && value) {
+          const truncatedValue =
+            typeof value === "string" && value.length > 50 && !isExpanded
+              ? value.slice(0, 50) + "..."
+              : value;
+
+          const handleToggleExpand = () => {
+            setExpandedColumns((prev) => ({
+              ...prev,
+              [columnKey]: !prev[columnKey],
+            }));
+          };
+
+          return (
+            <div
+              className={`cursor-pointer hover:text-blue-600 ${
+                isExpanded
+                  ? "whitespace-pre-wrap break-words min-h-[50px] max-w-[400px]"
+                  : "whitespace-nowrap"
+              }`}
+              onClick={handleToggleExpand}
+              title={isExpanded ? "點擊折疊" : "點擊展開"}
+              style={{
+                padding: isExpanded ? "8px 0" : undefined,
+              }}
+            >
+              {truncatedValue}
+              {typeof value === "string" && value.length > 50 && (
+                <span className="ml-1 text-xs text-blue-500">
+                  {isExpanded ? "(收合)" : "(展開)"}
+                </span>
+              )}
+            </div>
+          );
+        }
+        return value;
+      },
+    }));
+  }, [columnsWithWidth, expandableColumns, expandedColumns]);
 
   return (
     <div>
@@ -129,7 +202,7 @@ export function DataGrid<T extends MRT_RowData>({
 
       <ThemeProvider theme={theme}>
         <MaterialReactTable
-          columns={columnsWithWidth()}
+          columns={processColumns()}
           data={data}
           enableColumnActions={false}
           enableColumnFilters={false}

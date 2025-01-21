@@ -159,17 +159,6 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/energy-equipment"
-                  className={`nav-link ${
-                    pathname === "/energy-equipment" ? "active" : ""
-                  }`}
-                >
-                  <i className="nav-icon fas fa-clipboard-list"></i>
-                  <p>耗能設備一覽表</p>
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
                   href="/energy-subject-settings"
                   className={`nav-link ${
                     pathname === "/energy-subject-settings" ? "active" : ""
@@ -179,6 +168,18 @@ const Sidebar = () => {
                   <p>同類耗能主體設定</p>
                 </Link>
               </li>
+              <li className="nav-item">
+                <Link
+                  href="/energy-equipment"
+                  className={`nav-link ${
+                    pathname === "/energy-equipment" ? "active" : ""
+                  }`}
+                >
+                  <i className="nav-icon fas fa-clipboard-list"></i>
+                  <p>耗能設備一覽表</p>
+                </Link>
+              </li>
+
               <li className="nav-item">
                 <Link
                   href="/energy-review"

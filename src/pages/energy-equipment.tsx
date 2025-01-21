@@ -404,6 +404,18 @@ export default function EnergyEquipment() {
           </Tooltip>
         ),
       },
+      {
+        accessorKey: "note",
+        header: "備註",
+        size: 150,
+        Header: () => (
+          <Tooltip title="備註" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>備註</span>
+            </div>
+          </Tooltip>
+        ),
+      },
     ],
     [departmentOptions]
   );
@@ -486,6 +498,13 @@ export default function EnergyEquipment() {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        expandableColumns={["note"]}
+        initialState={{
+          pagination: {
+            pageSize: 50,
+          },
+          density: "compact",
+        }}
       />
 
       <DetailDialog<Equipment>

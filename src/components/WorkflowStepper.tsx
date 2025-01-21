@@ -35,8 +35,9 @@ const steps = [
   { label: "能源ECF", path: "/energy-ecf" },
   { label: "組織能源使用", path: "/org-energy-usage" },
   { label: "場域設定", path: "/area-settings" },
-  { label: "耗能設備一覽表", path: "/energy-equipment" },
   { label: "同類耗能主體設定", path: "/energy-subject-settings" },
+  { label: "耗能設備一覽表", path: "/energy-equipment" },
+
   { label: "能源審查", path: "/energy-review" },
   { label: "重大能源使用SEU", path: "/seu" },
   { label: "EnB能源基線", path: "/enb" },
