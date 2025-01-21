@@ -1,6 +1,6 @@
 // src/pages/api/energy-review.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { Report, Detail } from "../../lib/energy-review/types";
+import type { Report, Detail } from "@/lib/energy-review/types";
 
 interface ApiResponse {
   reports?: Report[];

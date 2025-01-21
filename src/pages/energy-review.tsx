@@ -15,32 +15,7 @@ import {
   DialogFooter,
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
-
-export interface Detail {
-  id?: string | number;
-  name: string;
-  type: string;
-  group: string;
-  area: string;
-  department: string;
-  workHours?: number;
-  workDays?: number;
-  loadFactor?: number;
-  quantity?: number;
-  totalHours: number;
-  kwPerHour: number;
-  actualEnergy: number;
-  actualConsumption?: number;
-  startDate: string;
-  endDate: string;
-  dataQuality: 1 | 2;
-  performanceEvaluation:
-    | "不合格"
-    | "正在改善中"
-    | "初評具潛力"
-    | "不確定"
-    | "良好";
-}
+import type { Detail } from "@/lib/energy-review/types";
 
 const PERFORMANCE_EVALUATION_OPTIONS = [
   { value: "不合格", label: "不合格" },
