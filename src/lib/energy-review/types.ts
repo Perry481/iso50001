@@ -3,6 +3,7 @@ export interface Report {
   title: string;
   startDate: string;
   endDate: string;
+  eeSgt: number;
 }
 
 export interface Detail {

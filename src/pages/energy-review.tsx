@@ -16,13 +16,14 @@ import {
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import type { Detail } from "@/lib/energy-review/types";
+import type { Equipment } from "@/lib/energy-equipment/types";
+import { DetailCheckboxDialog } from "../components/dialogs/DetailCheckboxDialog";
 
 const PERFORMANCE_EVALUATION_OPTIONS = [
   { value: "不合格", label: "不合格" },
   { value: "正在改善中", label: "正在改善中" },
   { value: "初評具潛力", label: "初評具潛力" },
   { value: "不確定", label: "不確定" },
-  { value: "良好", label: "良好" },
 ];
 
 const DATA_QUALITY_OPTIONS = [
@@ -41,25 +42,21 @@ const detailFields: Field[] = [
     key: "type",
     label: "類型",
     type: "text",
-    required: true,
   },
   {
     key: "group",
     label: "群組",
     type: "text",
-    required: true,
   },
   {
     key: "area",
-    label: "區域",
+    label: "場域",
     type: "text",
-    required: true,
   },
   {
     key: "department",
     label: "部門",
     type: "text",
-    required: true,
   },
   {
     key: "workHours",
@@ -85,7 +82,6 @@ const detailFields: Field[] = [
     key: "totalHours",
     label: "總時數",
     type: "number",
-    required: true,
   },
   {
     key: "kwPerHour",
@@ -97,7 +93,6 @@ const detailFields: Field[] = [
     key: "actualEnergy",
     label: "實際耗電量",
     type: "number",
-    required: true,
   },
   {
     key: "actualConsumption",
@@ -108,13 +103,11 @@ const detailFields: Field[] = [
     key: "startDate",
     label: "開始日期",
     type: "date",
-    required: true,
   },
   {
     key: "endDate",
     label: "結束日期",
     type: "date",
-    required: true,
   },
   {
     key: "dataQuality",
@@ -175,6 +168,8 @@ export default function EnergyECF() {
   const [showReportList, setShowReportList] = useState(true);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailCheckboxDialogOpen, setDetailCheckboxDialogOpen] =
+    useState(false);
   const [editingReport, setEditingReport] = useState<Report | undefined>();
   const [editingDetail, setEditingDetail] = useState<Detail | undefined>();
   const [deleteReportConfirm, setDeleteReportConfirm] = useState<Report | null>(
@@ -444,7 +439,7 @@ export default function EnergyECF() {
 
   const handleAdd = () => {
     setEditingDetail(undefined);
-    setDetailDialogOpen(true);
+    setDetailCheckboxDialogOpen(true);
   };
 
   const handleEdit = (row: Detail) => {
@@ -487,6 +482,57 @@ export default function EnergyECF() {
       setEditingDetail(undefined);
     } catch (error) {
       console.error("Failed to save detail:", error);
+    }
+  };
+
+  const handleDetailCheckboxSubmit = async (
+    data: Omit<Detail, "id">,
+    selectedEquipments: Equipment[]
+  ) => {
+    try {
+      if (!selectedReport?.title) {
+        console.error("No report selected");
+        return;
+      }
+
+      // Create a form entry for each selected equipment
+      const formEntries = selectedEquipments.map((equipment) => ({
+        // Equipment identification
+        equipmentId: equipment.id,
+        // Device-specific data from the equipment
+        name: equipment.name,
+        type: equipment.equipmentType,
+        group: equipment.usageGroup,
+        area: equipment.workArea,
+        department: "",
+        kwPerHour: equipment.ratedPower || 0,
+        quantity: equipment.quantity,
+
+        // Common form data
+        workHours: data.workHours,
+        workDays: data.workDays,
+        loadFactor: data.loadFactor,
+        totalHours: data.totalHours,
+        actualEnergy: data.actualEnergy,
+        actualConsumption: (data.totalHours || 0) * (equipment.ratedPower || 0), // Recalculate for each device
+        startDate: data.startDate,
+        endDate: data.endDate,
+        dataQuality: data.dataQuality,
+        performanceEvaluation: data.performanceEvaluation,
+      }));
+
+      // Log the data being saved in a more concise structure
+      console.log("Detail data that would be saved:", {
+        report: {
+          title: selectedReport.title,
+          details: formEntries,
+        },
+      });
+
+      // Close the dialog after logging
+      setDetailCheckboxDialogOpen(false);
+    } catch (error) {
+      console.error("Error logging detail data:", error);
     }
   };
 
@@ -632,7 +678,17 @@ export default function EnergyECF() {
         onOpenChange={setDetailDialogOpen}
         onSubmit={handleDetailSubmit}
         initialData={editingDetail}
-        mode={editingDetail ? "edit" : "create"}
+        mode="edit"
+        title="項目"
+        description="項目"
+        fields={detailFields}
+      />
+
+      <DetailCheckboxDialog<Detail>
+        open={detailCheckboxDialogOpen}
+        onOpenChange={setDetailCheckboxDialogOpen}
+        onSubmit={handleDetailCheckboxSubmit}
+        mode="create"
         title="項目"
         description="項目"
         fields={detailFields}

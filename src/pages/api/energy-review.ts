@@ -9,571 +9,118 @@ interface ApiResponse {
   devices?: Device[];
 }
 
-export const mockReports: Report[] = [
-  {
-    reviewerId: "18001",
-    title: "2021審查報告",
-    startDate: "2021-01-01",
-    endDate: "2021-12-31",
-  },
-  {
-    reviewerId: "18001",
-    title: "2022審查報告",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-  },
-  {
-    reviewerId: "21108",
-    title: "2023年能源審查(總廠)",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "2022年能源審查(總廠)",
-    startDate: "2022-01-01",
-    endDate: "2022-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "test for lonnnnnnnnnnnnnnnnnnnnng title",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "test(2)",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "test(3)",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "test(4)",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-  {
-    reviewerId: "24007",
-    title: "test(5)",
-    startDate: "2023-01-01",
-    endDate: "2023-12-31",
-  },
-];
+interface ApiReportResponse {
+  EeSgt: number;
+  EnergyEstimateName: string;
+  CreatedUserID: string;
+  CreatedTime: string;
+  UpdatedTime: string;
+  StartDate: string;
+  EndDate: string;
+}
 
-export const mockDetails: Record<string, Detail[]> = {
-  "2021審查報告": [
-    {
-      id: 1,
-      name: "2 ZERO-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 225.83,
-      kwPerHour: 1.5,
-      actualEnergy: 338.75,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 2,
-      name: "3 Test for lonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnng name",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "車用廠(1F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 213.76,
-      kwPerHour: 2.2,
-      actualEnergy: 470.27,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 3,
-      name: "6 JN01SS-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 37.81,
-      kwPerHour: 2.2,
-      actualEnergy: 83.18,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 4,
-      name: "9 A3-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 211.74,
-      kwPerHour: 2.3,
-      actualEnergy: 487,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 5,
-      name: "10 A3-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 163.57,
-      kwPerHour: 2.3,
-      actualEnergy: 376.21,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 6,
-      name: "11 JN02-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 198.45,
-      kwPerHour: 2.1,
-      actualEnergy: 416.75,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 7,
-      name: "12 JN02-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "車用廠(2F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 185.62,
-      kwPerHour: 2.1,
-      actualEnergy: 389.8,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 8,
-      name: "13 KOMAX-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 220.15,
-      kwPerHour: 1.8,
-      actualEnergy: 396.27,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 9,
-      name: "14 KOMAX-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 205.33,
-      kwPerHour: 1.8,
-      actualEnergy: 369.59,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 10,
-      name: "15 空壓機-1",
-      type: "公用設備",
-      group: "空壓設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 720,
-      kwPerHour: 55.0,
-      actualEnergy: 39600,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-    {
-      id: 16,
-      name: "21 製程空調-2",
-      type: "公用設備",
-      group: "空調設備",
-      area: "車用廠(1F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 720,
-      kwPerHour: 22.0,
-      actualEnergy: 15840,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-    {
-      id: 17,
-      name: "22 電鍍線-1",
-      type: "生產設備",
-      group: "電鍍設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 480,
-      kwPerHour: 65.0,
-      actualEnergy: 31200,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-    {
-      id: 18,
-      name: "23 電鍍線-2",
-      type: "生產設��",
-      group: "電鍍設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 480,
-      kwPerHour: 58.0,
-      actualEnergy: 27840,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-    {
-      id: 19,
-      name: "24 包裝機-1",
-      type: "生產設備",
-      group: "包裝設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 180,
-      kwPerHour: 3.5,
-      actualEnergy: 630,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 20,
-      name: "25 包裝機-2",
-      type: "生產設備",
-      group: "包裝設備",
-      area: "車用廠(1F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 160,
-      kwPerHour: 3.5,
-      actualEnergy: 560,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 21,
-      name: "26 廢水處理-1",
-      type: "公用設備",
-      group: "廢水處理",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 720,
-      kwPerHour: 18.5,
-      actualEnergy: 13320,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-    {
-      id: 22,
-      name: "27 監控系統",
-      type: "公用設備",
-      group: "監控設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 720,
-      kwPerHour: 5.0,
-      actualEnergy: 3600,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 23,
-      name: "28 測試設備-1",
-      type: "生產設備",
-      group: "測試設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 480,
-      kwPerHour: 8.5,
-      actualEnergy: 4080,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 24,
-      name: "29 測試設備-2",
-      type: "生產設備",
-      group: "測試設備",
-      area: "車用廠(2F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 480,
-      kwPerHour: 7.5,
-      actualEnergy: 3600,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 25,
-      name: "30 中央供料系統",
-      type: "公用設備",
-      group: "供料設備",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 720,
-      kwPerHour: 15.0,
-      actualEnergy: 10800,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 3,
-      performanceEvaluation: "良好",
-    },
-  ],
-  "2022審查報告": [],
-  "2023年能源審查(總廠)": [
-    {
-      id: 1,
-      name: "2 ZERO-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 225.83,
-      kwPerHour: 1.5,
-      actualEnergy: 338.75,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 2,
-      name: "3 JN03",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "車用廠(1F)",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 213.76,
-      kwPerHour: 2.2,
-      actualEnergy: 470.27,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 2,
-      performanceEvaluation: "正在改善",
-    },
-    {
-      id: 3,
-      name: "6 JN01SS-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 37.81,
-      kwPerHour: 2.2,
-      actualEnergy: 83.18,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 4,
-      name: "9 A3-1",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 211.74,
-      kwPerHour: 2.3,
-      actualEnergy: 487,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-    {
-      id: 5,
-      name: "10 A3-2",
-      type: "生產設備",
-      group: "自動壓著機",
-      area: "總廠",
-      department: "",
-      workHours: undefined,
-      workDays: undefined,
-      loadFactor: 1,
-      quantity: 1,
-      totalHours: 163.57,
-      kwPerHour: 2.3,
-      actualEnergy: 376.21,
-      actualConsumption: undefined,
-      startDate: "2022-01-01",
-      endDate: "2022-01-31",
-      dataQuality: 1,
-      performanceEvaluation: "不確定",
-    },
-  ],
-  "2022年能源審查(總廠)": [],
-};
+interface ApiDetailResponse {
+  page: number;
+  total: number;
+  records: number;
+  rows: ApiDetailRow[];
+}
+
+interface ApiDetailRow {
+  EeSgt: number;
+  ItemNo: number;
+  RowNo: number;
+  SourceType: string;
+  MachineID: string;
+  EceSgt: number;
+  EquipmentName: string;
+  DayHours: number | null;
+  UsedDays: number | null;
+  LoadFactor: number;
+  Quantity: number;
+  UsedHours: number;
+  KWHour: number;
+  KW: number | null;
+  RealConsumption: number;
+  EnergyGroupName: string;
+  EnergyAreaName: string;
+  DepartName: string | null;
+  StartDate: string;
+  EndDate: string;
+  DataQuality: number;
+  PerfomanceLevel: number;
+}
+
+function transformDate(dateString: string): string {
+  // Remove "/Date(" and ")/" and convert to number
+  const timestamp = parseInt(dateString.replace(/\/Date\((\d+)\)\//, "$1"));
+  const date = new Date(timestamp);
+  return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+}
+
+async function fetchReports(): Promise<Report[]> {
+  try {
+    const response = await fetch(
+      "http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=estimatereport"
+    );
+    const data: ApiReportResponse[] = await response.json();
+
+    return data.map((report) => ({
+      reviewerId: report.CreatedUserID,
+      title: report.EnergyEstimateName,
+      startDate: transformDate(report.StartDate),
+      endDate: transformDate(report.EndDate),
+      eeSgt: report.EeSgt, // Adding eeSgt to the report type
+    }));
+  } catch (error) {
+    console.error("Failed to fetch reports:", error);
+    return [];
+  }
+}
+
+function transformDetailRow(row: ApiDetailRow): Detail {
+  const performanceMap: Record<number, Detail["performanceEvaluation"]> = {
+    1: "不合格",
+    2: "正在改善中",
+    3: "初評具潛力",
+    4: "不確定",
+  };
+
+  return {
+    id: row.ItemNo,
+    name: row.EquipmentName,
+    type: row.SourceType === "M" ? "生產設備" : "非生產設備",
+    group: row.EnergyGroupName,
+    area: row.EnergyAreaName,
+    department: row.DepartName || "",
+    workHours: row.DayHours || undefined,
+    workDays: row.UsedDays || undefined,
+    loadFactor: row.LoadFactor,
+    quantity: row.Quantity,
+    totalHours: row.UsedHours,
+    kwPerHour: row.KWHour,
+    actualEnergy: row.RealConsumption,
+    actualConsumption: row.KW || undefined,
+    startDate: row.StartDate,
+    endDate: row.EndDate,
+    dataQuality: row.DataQuality as 1 | 2 | 3,
+    performanceEvaluation: performanceMap[row.PerfomanceLevel] || "不確定",
+  };
+}
+
+async function fetchDetails(eeSgt: number): Promise<Detail[]> {
+  try {
+    const response = await fetch(
+      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?EeSgt=${eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
+    );
+    const data: ApiDetailResponse = await response.json();
+
+    return data.rows.map(transformDetailRow);
+  } catch (error) {
+    console.error("Failed to fetch details:", error);
+    return [];
+  }
+}
 
 export interface Device {
   id: string;
@@ -581,22 +128,7 @@ export interface Device {
   category: "生產設備" | "非生產設備";
 }
 
-export const mockDevices: Device[] = [
-  { id: "102", name: "2 ZERO-2", category: "生產設備" },
-  { id: "103", name: "3 JN03", category: "生產設備" },
-  { id: "109", name: "6 JN01SS-1", category: "生產設備" },
-  { id: "111", name: "8 壓著機", category: "生產設備" },
-  { id: "112", name: "9 A3-1", category: "生產設備" },
-  { id: "113", name: "10 A3-2", category: "生產設備" },
-  { id: "114", name: "11 E2表線機", category: "生產設備" },
-  { id: "115", name: "12 E3表線機", category: "生產設備" },
-  { id: "201", name: "空調系統", category: "非生產設備" },
-  { id: "202", name: "照明系統", category: "非生產設備" },
-  { id: "203", name: "空壓系統", category: "非生產設備" },
-  { id: "204", name: "電梯", category: "非生產設備" },
-];
-
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
@@ -604,59 +136,33 @@ export default function handler(
 
   switch (method) {
     case "GET":
-      // Add this check before other GET logic
-      if (query.type === "devices") {
-        return res.status(200).json({ devices: mockDevices });
-      }
-
       // Get reports list
       if (!query.title) {
-        return res.status(200).json({ reports: mockReports });
+        const reports = await fetchReports();
+        return res.status(200).json({ reports });
       }
 
       // Get specific report details
-      const reportTitle = query.title as string;
-      const details = mockDetails[reportTitle] || [];
+      const report = await fetchReports();
+      const selectedReport = report.find((r) => r.title === query.title);
+      if (!selectedReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const details = await fetchDetails(selectedReport.eeSgt);
       return res.status(200).json({ details });
 
     case "POST":
-      // Handle report creation
-      if (req.body.type === "report") {
-        const newReport = req.body.data as Report;
-        mockReports.push(newReport);
-        return res.status(201).json({ message: "Report created successfully" });
-      }
-      return res.status(400).json({ message: "Invalid request type" });
+      // TODO: Implement report and detail creation
+      return res.status(501).json({ message: "Not implemented" });
 
     case "PUT":
-      // Handle report update
-      if (req.body.type === "report") {
-        const updatedReport = req.body.data as Report;
-        const index = mockReports.findIndex(
-          (r) => r.title === updatedReport.title
-        );
-        if (index !== -1) {
-          mockReports[index] = updatedReport;
-          return res
-            .status(200)
-            .json({ message: "Report updated successfully" });
-        }
-        return res.status(404).json({ message: "Report not found" });
-      }
-      return res.status(400).json({ message: "Invalid request type" });
+      // TODO: Implement report and detail update
+      return res.status(501).json({ message: "Not implemented" });
 
     case "DELETE":
-      // Handle report deletion
-      const titleToDelete = query.title as string;
-      const reportIndex = mockReports.findIndex(
-        (r) => r.title === titleToDelete
-      );
-      if (reportIndex !== -1) {
-        mockReports.splice(reportIndex, 1);
-        delete mockDetails[titleToDelete];
-        return res.status(200).json({ message: "Report deleted successfully" });
-      }
-      return res.status(404).json({ message: "Report not found" });
+      // TODO: Implement report and detail deletion
+      return res.status(501).json({ message: "Not implemented" });
 
     default:
       res.setHeader("Allow", ["GET", "POST", "PUT", "DELETE", "devices"]);

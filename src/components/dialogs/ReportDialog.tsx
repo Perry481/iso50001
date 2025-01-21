@@ -16,6 +16,7 @@ export interface Report {
   reviewerId: string;
   startDate: string;
   endDate: string;
+  eeSgt: number;
 }
 
 type ReportFormData = {
@@ -23,6 +24,7 @@ type ReportFormData = {
   reviewerId: string;
   startDate: string;
   endDate: string;
+  eeSgt: number;
 };
 
 type ReportDialogProps = {
@@ -45,6 +47,7 @@ export function ReportDialog({
     reviewerId: "",
     startDate: "",
     endDate: "",
+    eeSgt: 0,
   });
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export function ReportDialog({
         reviewerId: initialData?.reviewerId || "",
         startDate: initialData?.startDate || "",
         endDate: initialData?.endDate || "",
+        eeSgt: initialData?.eeSgt || 0,
       });
     }
   }, [open, initialData]);
