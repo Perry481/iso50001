@@ -2,18 +2,9 @@ export interface Area {
   id: string;
   code: string;
   name: string;
-  referenceCode?: string;
-  manufacturer: string;
-  equipmentType: string;
-  workArea: string;
   department: string;
-  usageGroup: string;
-  status: string;
-  ratedPower?: number;
-  actualPower?: number;
-  powerUnit: string;
-  assetNumber?: string;
-  quantity: number;
+  meterNumber?: string;
+  note?: string;
 }
 
 export interface SelectOption {

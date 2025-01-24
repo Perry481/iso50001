@@ -37,10 +37,7 @@ interface SEUEquipmentData {
 
 interface MonthlyData {
   date: string;
-  total: number;
-  undefined: number;
-  officialVehicles: number;
-  autoPressMachine: number;
+  [key: string]: string | number;
 }
 
 interface SEUStateData {
@@ -59,6 +56,13 @@ interface SEUGroupData {
   status?: string;
 }
 
+interface TooltipParam {
+  axisValue: string;
+  marker: string;
+  seriesName: string;
+  value: number;
+}
+
 export default function SEU() {
   const [reports, setReports] = useState<Report[]>([]);
   const [showReportList, setShowReportList] = useState(true);
@@ -71,15 +75,17 @@ export default function SEU() {
   const [filterType, setFilterType] = useState<FilterType>("共用設備群組");
   const [energyConsumption, setEnergyConsumption] = useState<EnergyData[]>([]);
   const [energyEmission, setEnergyEmission] = useState<EnergyData[]>([]);
-  const [equipmentConsumption, setEquipmentConsumption] = useState<
-    EnergyData[]
-  >([]);
   const [seuEquipmentData, setSeuEquipmentData] = useState<SEUEquipmentData[]>(
     []
   );
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [seuStateData, setSeuStateData] = useState<SEUStateData[]>([]);
   const [seuGroupData, setSEUGroupData] = useState<SEUGroupData[]>([]);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
+  // Add refs for chart instances
+  const equipmentChartRef = React.useRef<ReactECharts>(null);
+  const monthlyChartRef = React.useRef<ReactECharts>(null);
 
   useEffect(() => {
     const loadReports = async () => {
@@ -95,27 +101,45 @@ export default function SEU() {
     void loadReports();
   }, []);
 
-  const loadEnergyData = useCallback(async () => {
-    try {
-      const response = await fetch("/api/seu?type=energy");
-      const data = await response.json();
-      setEnergyConsumption(data.energyConsumption || []);
-      setEnergyEmission(data.energyEmission || []);
-      setEquipmentConsumption(data.equipmentConsumption || []);
-      setSeuEquipmentData(data.seuEquipmentData || []);
-      setMonthlyData(data.monthlyData || []);
-      setSeuStateData(data.seuStateData || []);
-      setSEUGroupData(data.seuGroupData || []);
-    } catch (error) {
-      console.error("Error loading energy data:", error);
+  // Map filter type to category type
+  const getCategoryType = (filter: FilterType): string => {
+    switch (filter) {
+      case "共用設備群組":
+        return "C";
+      case "工作場域管理":
+        return "A";
+      case "能源類別":
+        return "E";
+      default:
+        return "C";
     }
-  }, []);
+  };
+
+  const loadEnergyData = useCallback(
+    async (eeSgt: number, categoryType: string) => {
+      try {
+        const response = await fetch(
+          `/api/seu?type=energy&eeSgt=${eeSgt}&categoryType=${categoryType}`
+        );
+        const data = await response.json();
+        setEnergyConsumption(data.energyConsumption || []);
+        setEnergyEmission(data.energyEmission || []);
+        setSeuEquipmentData(data.seuEquipmentData || []);
+        setMonthlyData(data.monthlyData || []);
+        setSeuStateData(data.seuStateData || []);
+        setSEUGroupData(data.seuGroupData || []);
+      } catch (error) {
+        console.error("Error loading energy data:", error);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    if (!showReportList) {
-      void loadEnergyData();
+    if (!showReportList && selectedReport?.eeSgt) {
+      void loadEnergyData(selectedReport.eeSgt, getCategoryType(filterType));
     }
-  }, [showReportList, loadEnergyData]);
+  }, [showReportList, selectedReport, loadEnergyData, filterType]);
 
   const handleAddReport = () => {
     setEditingReport(undefined);
@@ -131,28 +155,20 @@ export default function SEU() {
     setDeleteReportConfirm(report);
   };
 
-  const handleReportClick = async () => {
+  const handleReportClick = async (report: Report) => {
+    setSelectedReport(report);
     setShowReportList(false);
   };
 
   const handleReportSubmit = async (data: Report) => {
     try {
-      const response = await fetch("/api/seu", {
-        method: editingReport ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "report",
-          data: data,
-        }),
+      // Log the report data that would be saved
+      console.log("Report data that would be saved:", {
+        report: {
+          ...data,
+          mode: editingReport ? "edit" : "create",
+        },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save report");
-      }
-
-      const refreshResponse = await fetch("/api/seu");
-      const refreshData = await refreshResponse.json();
-      setReports(refreshData.reports);
 
       setReportDialogOpen(false);
       setEditingReport(undefined);
@@ -163,13 +179,8 @@ export default function SEU() {
 
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
-      await fetch(`/api/seu?title=${encodeURIComponent(report.title)}`, {
-        method: "DELETE",
-      });
-
-      const response = await fetch("/api/seu");
-      const data = await response.json();
-      setReports(data.reports);
+      // Log the report that would be deleted
+      console.log("Report that would be deleted:", report);
       setDeleteReportConfirm(null);
     } catch (error) {
       console.error("Failed to delete report:", error);
@@ -277,7 +288,9 @@ export default function SEU() {
         params: { name: string; marker: string; value: number }[]
       ) {
         const param = params[0];
-        return `<div style="font-weight: bold">${param.name}</div>${param.marker}${param.value}`;
+        return `<div style="font-weight: bold">${param.name}</div>${
+          param.marker
+        }${param.value.toLocaleString()}`;
       },
     },
     grid: {
@@ -289,7 +302,22 @@ export default function SEU() {
     },
     xAxis: {
       type: "category",
-      data: equipmentConsumption.map((item) => item.name),
+      data:
+        monthlyData.length > 0
+          ? Object.entries(monthlyData[0])
+              .filter(([key]) => key !== "date" && key !== "全部")
+              .map(([key]) => ({
+                key,
+                value: monthlyData.reduce((sum, month) => {
+                  const monthValue = month[key];
+                  return (
+                    sum + (typeof monthValue === "number" ? monthValue : 0)
+                  );
+                }, 0),
+              }))
+              .sort((a, b) => b.value - a.value)
+              .map(({ key }) => key)
+          : [],
       axisLabel: {
         interval: 0,
         rotate: 30,
@@ -297,11 +325,27 @@ export default function SEU() {
     },
     yAxis: {
       type: "value",
+      axisLabel: {
+        formatter: (value: number) => value.toLocaleString(),
+      },
     },
     series: [
       {
         type: "bar",
-        data: equipmentConsumption.map((item) => item.value),
+        data:
+          monthlyData.length > 0
+            ? Object.entries(monthlyData[0])
+                .filter(([key]) => key !== "date" && key !== "全部")
+                .map(([key]) => ({
+                  key,
+                  value: monthlyData.reduce((sum, month) => {
+                    const value = month[key];
+                    return sum + (typeof value === "number" ? value : 0);
+                  }, 0),
+                }))
+                .sort((a, b) => b.value - a.value)
+                .map(({ value }) => value)
+            : [],
         itemStyle: {
           color: "#6B7ED9",
         },
@@ -385,8 +429,8 @@ export default function SEU() {
         itemStyle: {
           color: function (params: { dataIndex: number }) {
             return seuEquipmentData[params.dataIndex].IsSEU
-              ? "#6B7ED9"
-              : "#91CC75";
+              ? "#91CC75"
+              : "#6B7ED9";
           },
         },
       },
@@ -422,19 +466,42 @@ export default function SEU() {
       axisPointer: {
         type: "shadow",
       },
+      formatter: function (params: TooltipParam[]) {
+        let result = `${params[0].axisValue}<br/>`;
+        params.forEach((param) => {
+          result += `${param.marker}${
+            param.seriesName
+          }: ${param.value.toLocaleString()}<br/>`;
+        });
+        return result;
+      },
     },
     legend: {
-      data: ["全部", "未設定", "公務車(汽、柴油)", "自動壓蓋機"],
+      type: "scroll",
+      data:
+        monthlyData.length > 0
+          ? Object.keys(monthlyData[0]).filter((key) => key !== "date")
+          : [],
       top: 25,
       textStyle: {
         fontSize: 12,
+      },
+      pageButtonItemGap: 5,
+      pageButtonGap: 5,
+      pageButtonPosition: "end",
+      pageFormatter: "{current}/{total}",
+      pageIconColor: "#6B7ED9",
+      pageIconInactiveColor: "#aaa",
+      pageIconSize: 15,
+      pageTextStyle: {
+        color: "#6B7ED9",
       },
     },
     grid: {
       left: "3%",
       right: "4%",
       bottom: "3%",
-      top: "15%",
+      top: "20%",
       containLabel: true,
     },
     xAxis: {
@@ -445,53 +512,32 @@ export default function SEU() {
     yAxis: {
       type: "value",
       name: "kWh",
+      axisLabel: {
+        formatter: (value: number) => value.toLocaleString(),
+      },
     },
-    series: [
-      {
-        name: "全部",
-        type: "line",
-        data: monthlyData.map((item) => item.total),
-        symbol: "circle",
-        symbolSize: 8,
-        smooth: true,
-        lineStyle: {
-          width: 2,
-        },
-      },
-      {
-        name: "未設定",
-        type: "line",
-        data: monthlyData.map((item) => item.undefined),
-        symbol: "circle",
-        symbolSize: 8,
-        smooth: true,
-        lineStyle: {
-          width: 2,
-        },
-      },
-      {
-        name: "公務車(汽、柴油)",
-        type: "line",
-        data: monthlyData.map((item) => item.officialVehicles),
-        symbol: "circle",
-        symbolSize: 8,
-        smooth: true,
-        lineStyle: {
-          width: 2,
-        },
-      },
-      {
-        name: "自動壓蓋機",
-        type: "line",
-        data: monthlyData.map((item) => item.autoPressMachine),
-        symbol: "circle",
-        symbolSize: 8,
-        smooth: true,
-        lineStyle: {
-          width: 2,
-        },
-      },
-    ],
+    series:
+      monthlyData.length > 0
+        ? Object.keys(monthlyData[0])
+            .filter((key) => key !== "date")
+            .map((key) => ({
+              name: key,
+              type: "line",
+              data: monthlyData.map((item) => {
+                const value = item[key];
+                return typeof value === "number" ? value : 0;
+              }),
+              symbol: "circle",
+              symbolSize: 8,
+              smooth: true,
+              lineStyle: {
+                width: 2,
+              },
+              emphasis: {
+                focus: "series",
+              },
+            }))
+        : [],
   };
 
   const handleStateChange = useCallback((row: SEUStateData) => {
@@ -513,6 +559,29 @@ export default function SEU() {
       )
     );
   }, []);
+
+  // Clear chart data and reload when filter type changes
+  const handleFilterTypeChange = (value: FilterType) => {
+    setFilterType(value);
+    // Dispose chart instances
+    if (equipmentChartRef.current?.getEchartsInstance()) {
+      equipmentChartRef.current.getEchartsInstance().dispose();
+    }
+    if (monthlyChartRef.current?.getEchartsInstance()) {
+      monthlyChartRef.current.getEchartsInstance().dispose();
+    }
+    // Clear all chart data
+    setMonthlyData([]);
+    setEnergyConsumption([]);
+    setEnergyEmission([]);
+    setSeuEquipmentData([]);
+    setSeuStateData([]);
+    setSEUGroupData([]);
+    // Load new data with the selected category type
+    if (selectedReport?.eeSgt) {
+      void loadEnergyData(selectedReport.eeSgt, getCategoryType(value));
+    }
+  };
 
   return (
     <div className="p-2 space-y-2">
@@ -540,10 +609,7 @@ export default function SEU() {
               返回列表
             </Button>
             <div className="ml-auto">
-              <Select
-                value={filterType}
-                onValueChange={(value: FilterType) => setFilterType(value)}
-              >
+              <Select value={filterType} onValueChange={handleFilterTypeChange}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="選擇分類方式" />
                 </SelectTrigger>
@@ -566,7 +632,17 @@ export default function SEU() {
           <div className="mt-4">
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
               <ReactECharts
+                ref={equipmentChartRef}
                 option={equipmentChartOption}
+                style={{ height: "400px" }}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+              <ReactECharts
+                ref={monthlyChartRef}
+                option={monthlyChartOption}
                 style={{ height: "400px" }}
               />
             </div>
@@ -579,14 +655,7 @@ export default function SEU() {
               />
             </div>
           </div>
-          <div className="mt-4">
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-              <ReactECharts
-                option={monthlyChartOption}
-                style={{ height: "400px" }}
-              />
-            </div>
-          </div>
+
           <div className="mt-4">
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
               <div className="grid grid-cols-2 gap-6">

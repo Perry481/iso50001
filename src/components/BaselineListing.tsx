@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { areaSettingsService } from "@/lib/area-settings/service";
+import { energyECFService } from "@/lib/energy-ecf/service";
+import { deptListService } from "@/lib/dept-list/service";
 
 interface BaselineItem {
   id?: number | string;
@@ -43,6 +46,46 @@ export function BaselineListing({
   onItemClick,
   addButtonText = "新增",
 }: BaselineListingProps) {
+  const [areaMap, setAreaMap] = useState<Record<string, string>>({});
+  const [energyTypeMap, setEnergyTypeMap] = useState<Record<string, string>>(
+    {}
+  );
+  const [deptMap, setDeptMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load areas
+        const areaData = await areaSettingsService.getAreas();
+        const areaMap: Record<string, string> = {};
+        areaData.forEach((area) => {
+          areaMap[area.id] = area.name;
+        });
+        setAreaMap(areaMap);
+
+        // Load energy types
+        const ecfData = await energyECFService.getECFs();
+        const ecfMap: Record<string, string> = {};
+        ecfData.forEach((ecf) => {
+          ecfMap[ecf.code] = ecf.name;
+        });
+        setEnergyTypeMap(ecfMap);
+
+        // Load departments
+        const deptData = await deptListService.getDepts();
+        const deptMap: Record<string, string> = {};
+        deptData.forEach((dept) => {
+          deptMap[dept.value] = dept.label;
+        });
+        setDeptMap(deptMap);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const totalPages = Math.ceil(items.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -133,25 +176,39 @@ export function BaselineListing({
                   <div className="flex gap-8">
                     <div className="flex-1 space-y-2">
                       <p className="text-sm">
-                        <span className="text-gray-500">目標項目：</span>
-                        <span className="text-gray-900">{item.targetItem}</span>
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-gray-500">工作區域：</span>
-                        <span className="text-gray-900">{item.workArea}</span>
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-gray-500">狀態：</span>
-                        <span className="text-gray-900">{item.locked}</span>
+                        <span className="text-gray-500">標的選項：</span>
+                        <span className="text-gray-900">
+                          {item.targetItem || "(未設定)"}
+                        </span>
                       </p>
                       <p className="text-sm">
                         <span className="text-gray-500">能源類型：</span>
-                        <span className="text-gray-900">{item.energyType}</span>
+                        <span className="text-gray-900">
+                          {energyTypeMap[item.energyType] ||
+                            item.energyType ||
+                            "(未設定)"}
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-gray-500">工作區域：</span>
+                        <span className="text-gray-900">
+                          {areaMap[item.workArea] ||
+                            item.workArea ||
+                            "(未設定)"}
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-gray-500">狀態：</span>
+                        <span className="text-gray-900">
+                          {item.locked || "(未設定)"}
+                        </span>
                       </p>
                       <p className="text-sm">
                         <span className="text-gray-500">共用群組：</span>
                         <span className="text-gray-900">
-                          {item.sharedGroup}
+                          {deptMap[item.sharedGroup] ||
+                            item.sharedGroup ||
+                            "(未設定)"}
                         </span>
                       </p>
                     </div>

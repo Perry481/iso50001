@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
+import { areaSettingsService } from "@/lib/area-settings/service";
+import { energyECFService } from "@/lib/energy-ecf/service";
+import { deptListService } from "@/lib/dept-list/service";
 
 export interface BaselineFormData {
   baselineCode: string;
@@ -90,16 +93,48 @@ export function BaselineDialog({
     lockedStates: [],
   });
 
+  const [energyTypeLabels, setEnergyTypeLabels] = useState<
+    Record<string, string>
+  >({});
+  const [areaLabels, setAreaLabels] = useState<Record<string, string>>({});
+  const [deptLabels, setDeptLabels] = useState<Record<string, string>>({});
+
   useEffect(() => {
     const fetchOptions = async () => {
       try {
+        // Fetch base options from API
         const response = await fetch("/api/enb");
         const result = await response.json();
+
+        // Fetch energy types from service
+        const ecfData = await energyECFService.getECFs();
+        const energyTypeMap: Record<string, string> = {};
+        ecfData.forEach((ecf) => {
+          energyTypeMap[ecf.code] = ecf.name;
+        });
+        setEnergyTypeLabels(energyTypeMap);
+
+        // Fetch areas from service
+        const areaData = await areaSettingsService.getAreas();
+        const areaMap: Record<string, string> = {};
+        areaData.forEach((area) => {
+          areaMap[area.id] = area.name;
+        });
+        setAreaLabels(areaMap);
+
+        // Fetch departments from service
+        const deptData = await deptListService.getDepts();
+        const deptMap: Record<string, string> = {};
+        deptData.forEach((dept) => {
+          deptMap[dept.value] = dept.label;
+        });
+        setDeptLabels(deptMap);
+
         setOptions({
           targetItems: result.targetItems,
-          energyTypes: result.energyTypes,
-          workAreas: result.workAreas,
-          sharedGroups: result.sharedGroups,
+          energyTypes: Object.keys(energyTypeMap),
+          workAreas: Object.keys(areaMap),
+          sharedGroups: Object.keys(deptMap),
           lockedStates: result.lockedStates,
         });
       } catch (error) {
@@ -159,7 +194,7 @@ export function BaselineDialog({
     try {
       // Validate required fields
       if (!formData.baselineCode || !formData.targetItem || !formData.locked) {
-        setError("請填寫必要欄位：基線代碼、目標項目、狀態");
+        setError("請填寫必要欄位：基線代碼、標的選項、狀態");
         return;
       }
 
@@ -235,14 +270,14 @@ export function BaselineDialog({
 
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="targetItem" className="text-right">
-              目標項目
+              標的選項
             </label>
             <Select
               value={formData.targetItem}
               onValueChange={handleTargetItemChange}
             >
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="選擇目標項目" />
+                <SelectValue placeholder="選擇標的選項" />
               </SelectTrigger>
               <SelectContent>
                 {options.targetItems.map((item) => (
@@ -271,7 +306,7 @@ export function BaselineDialog({
               <SelectContent>
                 {options.energyTypes.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type}
+                    {energyTypeLabels[type] || type}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -295,7 +330,7 @@ export function BaselineDialog({
               <SelectContent>
                 {options.sharedGroups.map((group) => (
                   <SelectItem key={group} value={group}>
-                    {group}
+                    {deptLabels[group] || group}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -319,7 +354,7 @@ export function BaselineDialog({
               <SelectContent>
                 {options.workAreas.map((area) => (
                   <SelectItem key={area} value={area}>
-                    {area}
+                    {areaLabels[area] || area}
                   </SelectItem>
                 ))}
               </SelectContent>
