@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { BaselineListing } from "@/components/BaselineListing";
-import {
-  BaselineDialog,
-  BaselineFormData,
-} from "@/components/dialogs/BaselineDialog";
+import { BaselineDialog } from "@/components/dialogs/BaselineDialog";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +36,7 @@ interface ENBData {
   X3?: string;
   X4?: string;
   X5?: string;
+  ebSgt: number;
 }
 
 interface BaselineData {
@@ -50,6 +48,8 @@ interface BaselineData {
   X3?: number;
   X4?: number;
   X5?: number;
+  createdTime: string;
+  updatedTime: string;
 }
 
 interface RegressionData {
@@ -89,14 +89,30 @@ interface BaselineComparison {
 interface BaselineDetails {
   baselineData: BaselineData[];
   regressionData: RegressionData;
-  chartData: Record<string, ChartData>;
+  chartData: {
+    scatterData: [number, number][];
+    regressionLine: [number, number][];
+    unit: string;
+    caption: string;
+  };
   comparisonData: BaselineComparison[];
 }
 
-interface ChartData {
-  Data: [number, number, number][];
-  Unit: string;
-  Caption: string;
+interface ENBFormData {
+  id?: number | string;
+  baselineCode: string;
+  targetItem: string;
+  energyType: string;
+  workArea: string;
+  sharedGroup: string;
+  locked: string;
+  note: string;
+  X1: string;
+  X2: string;
+  X3?: string;
+  X4?: string;
+  X5?: string;
+  ebSgt?: number;
 }
 
 const tooltipProps = {
@@ -228,6 +244,34 @@ export default function ENB() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ cell }: { cell: MRT_Cell<BaselineData> }) => {
+          const value = cell.getValue<number>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "createdTime",
+        header: "建立時間",
+        size: 110,
+        Header: () => (
+          <Tooltip title="建立時間" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>建立時間</span>
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        accessorKey: "updatedTime",
+        header: "更新時間",
+        size: 110,
+        Header: () => (
+          <Tooltip title="更新時間" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>更新時間</span>
+            </div>
+          </Tooltip>
+        ),
       },
     ];
 
@@ -246,7 +290,7 @@ export default function ENB() {
         </Tooltip>
       ),
       Cell: ({ cell }: { cell: MRT_Cell<BaselineData> }) => {
-        const value = cell.getValue();
+        const value = cell.getValue<number>();
         return typeof value === "number" ? value.toFixed(2) : "-";
       },
       enableEditing: selectedBaseline
@@ -285,6 +329,45 @@ export default function ENB() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const fetchRegressionData = async () => {
+      if (!selectedBaseline?.ebSgt) return;
+
+      try {
+        const response = await fetch(
+          `/api/enb?ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch regression data");
+        }
+        const data = await response.json();
+
+        setBaselineDetails((prev) => {
+          const currentDetails = prev[selectedBaseline.baselineCode];
+          if (!currentDetails) return prev;
+
+          return {
+            ...prev,
+            [selectedBaseline.baselineCode]: {
+              ...currentDetails,
+              regressionData:
+                data.regressionData || currentDetails.regressionData,
+              comparisonData:
+                data.comparisonData || currentDetails.comparisonData,
+              chartData: data.chartData || currentDetails.chartData,
+            },
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching regression data:", error);
+      }
+    };
+
+    if (selectedBaseline && selectedX) {
+      fetchRegressionData();
+    }
+  }, [selectedX, selectedBaseline]);
+
   const handleAddItem = () => {
     setDialogState({
       open: true,
@@ -310,8 +393,8 @@ export default function ENB() {
     setDeleteConfirm(null);
   };
 
-  const handleSubmit = async (formData: BaselineFormData) => {
-    // Convert BaselineFormData back to ENBData
+  const handleSubmit = async (formData: ENBFormData) => {
+    // Convert ENBFormData back to ENBData
     const enbData: ENBData = {
       baselineCode: formData.baselineCode,
       targetItem: formData.targetItem,
@@ -325,6 +408,7 @@ export default function ENB() {
       X3: formData.X3,
       X4: formData.X4,
       X5: formData.X5,
+      ebSgt: formData.ebSgt || 0,
     };
 
     console.log("Submit data:", enbData);
@@ -341,7 +425,7 @@ export default function ENB() {
     }
   };
 
-  // Convert ENBData to BaselineFormData
+  // Convert ENBData to ENBFormData
   const getDialogData = (data?: ENBData) => {
     if (!data) return undefined;
     return {
@@ -354,9 +438,90 @@ export default function ENB() {
     };
   };
 
-  const handleBaselineClick = (baseline: ENBData) => {
-    setSelectedBaseline(baseline);
-    setShowListing(false);
+  const handleBaselineClick = async (baseline: ENBFormData) => {
+    try {
+      // Set initial X value to the first available X
+      const initialX =
+        ["X1", "X2", "X3", "X4", "X5"].find(
+          (x) =>
+            baseline[x as keyof ENBFormData] !== "未使用" &&
+            baseline[x as keyof ENBFormData] !== ""
+        ) || "X1";
+      setSelectedX(initialX);
+
+      const response = await fetch(
+        `/api/enb?ebSgt=${baseline.ebSgt}&feature=${initialX}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch baseline details");
+      }
+      const data = await response.json();
+
+      const newBaselineDetails: BaselineDetails = {
+        baselineData: data.baselineDetails,
+        regressionData: data.regressionData || {
+          quadratic: {
+            a: 0,
+            b: 0,
+            c: 0,
+            y: "",
+            rSquare: 0,
+          },
+          linear: {
+            X1Label: "",
+            X2Label: "",
+            X3Label: "",
+            X1Coefficient: 0,
+            X2Coefficient: 0,
+            X3Coefficient: 0,
+            constant: 0,
+            equation: "",
+            rSquare: 0,
+            MBE: 0,
+            MBEPercentage: 0,
+            MAE: 0,
+            MAEPercentage: 0,
+            RMSE: 0,
+            CvRMSE: 0,
+            maxError: 0,
+          },
+        },
+        chartData: data.chartData || {
+          scatterData: [],
+          regressionLine: [],
+          unit: "",
+          caption: "",
+        },
+        comparisonData: data.comparisonData || [],
+      };
+
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [baseline.baselineCode]: newBaselineDetails,
+      }));
+
+      // Convert ENBFormData to ENBData
+      const enbData: ENBData = {
+        baselineCode: baseline.baselineCode,
+        targetItem: baseline.targetItem,
+        energyType: baseline.energyType,
+        workArea: baseline.workArea,
+        sharedGroup: baseline.sharedGroup,
+        locked: baseline.locked,
+        note: baseline.note,
+        X1: baseline.X1,
+        X2: baseline.X2,
+        X3: baseline.X3,
+        X4: baseline.X4,
+        X5: baseline.X5,
+        ebSgt: baseline.ebSgt || 0,
+      };
+
+      setSelectedBaseline(enbData);
+      setShowListing(false);
+    } catch (error) {
+      console.error("Error fetching baseline details:", error);
+    }
   };
 
   const handleAddDetail = () => {
@@ -497,6 +662,7 @@ export default function ENB() {
                     },
                   }
                 }
+                selectedX={selectedX}
               />
             </div>
           </div>
@@ -519,7 +685,7 @@ export default function ENB() {
           </div>
           <div className="bg-white p-6 rounded-xl shadow-md">
             <div className="h-[400px]">
-              {currentBaselineDetails?.chartData[selectedX] && (
+              {currentBaselineDetails?.chartData && (
                 <ReactECharts
                   style={{ height: "100%" }}
                   option={{
@@ -547,8 +713,7 @@ export default function ENB() {
                         },
                       },
                       {
-                        text: currentBaselineDetails.chartData[selectedX]
-                          .Caption,
+                        text: currentBaselineDetails.chartData.caption || "",
                         top: 25,
                         left: "center",
                         textStyle: {
@@ -558,7 +723,7 @@ export default function ENB() {
                       },
                     ],
                     legend: {
-                      data: ["實際值", "預測值"],
+                      data: ["實際值", "回歸線"],
                       top: 50,
                       left: "center",
                       textStyle: {
@@ -567,45 +732,34 @@ export default function ENB() {
                     },
                     xAxis: {
                       type: "value",
-                      name: "",
-                      splitLine: {
-                        lineStyle: {
-                          type: "dashed",
-                          opacity: 0.5,
-                        },
-                      },
+                      name: currentBaselineDetails.chartData.unit || "",
+                      nameLocation: "middle",
+                      nameGap: 25,
                     },
                     yAxis: {
                       type: "value",
                       name: "監測值",
                       nameLocation: "middle",
-                      nameGap: 35,
-                      splitLine: {
-                        lineStyle: {
-                          type: "dashed",
-                          opacity: 0.5,
-                        },
-                      },
+                      nameGap: 40,
                     },
                     series: [
                       {
-                        type: "scatter",
                         name: "實際值",
-                        data: currentBaselineDetails.chartData[
-                          selectedX
-                        ].Data.map(([x, y]) => [x, y]),
+                        type: "scatter",
                         symbolSize: 8,
+                        data:
+                          currentBaselineDetails.chartData.scatterData || [],
                       },
                       {
+                        name: "回歸線",
                         type: "line",
-                        name: "預測值",
-                        data: currentBaselineDetails.chartData[
-                          selectedX
-                        ].Data.map(([x, , z]) => [x, z]),
                         smooth: true,
                         showSymbol: false,
+                        data:
+                          currentBaselineDetails.chartData.regressionLine || [],
                         lineStyle: {
                           width: 2,
+                          type: "solid",
                         },
                       },
                     ],

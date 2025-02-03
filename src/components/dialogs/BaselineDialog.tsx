@@ -39,6 +39,7 @@ export interface BaselineFormData {
   X3State: boolean;
   X4State: boolean;
   X5State: boolean;
+  ebSgt?: number;
 }
 
 interface BaselineDialogProps {

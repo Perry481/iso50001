@@ -13,6 +13,7 @@ interface ENBData {
   X3?: string;
   X4?: string;
   X5?: string;
+  ebSgt: number;
 }
 
 interface BaselineData {
@@ -24,6 +25,8 @@ interface BaselineData {
   X3?: number;
   X4?: number;
   X5?: number;
+  createdTime: string;
+  updatedTime: string;
 }
 
 interface RegressionData {
@@ -52,23 +55,6 @@ interface RegressionData {
     CvRMSE: number;
     maxError: number;
   };
-}
-
-interface ChartData {
-  Data: [number, number, number][];
-  Unit: string;
-  Caption: string;
-}
-
-interface BaselineDetails {
-  baselineData: BaselineData[];
-  regressionData: RegressionData;
-  chartData: Record<string, ChartData>;
-  comparisonData: {
-    date: string;
-    actualValue: number;
-    theoreticalValue: number;
-  }[];
 }
 
 interface ApiENBResponse {
@@ -105,6 +91,44 @@ interface ApiENBRow {
   UnitX3: string | null;
   UnitX4: string | null;
   UnitX5: string | null;
+}
+
+interface ApiBaselineDetailResponse {
+  page: number;
+  total: number;
+  records: number;
+  rows: ApiBaselineDetailRow[];
+}
+
+interface ApiBaselineDetailRow {
+  EbSgt: number;
+  StartDate: string;
+  Value: number;
+  X1: number | null;
+  X2: number | null;
+  X3: number | null;
+  X4: number | null;
+  X5: number | null;
+  CreatedTime: string;
+  UpdatedTime: string;
+}
+
+interface RegressionStaticResponse {
+  a: number;
+  b: number;
+  c: number;
+  rSquare: number;
+  y: string;
+  Property: [string, string][];
+  Qty: number[][];
+  Category: string[];
+  Title: string[];
+}
+
+interface BaselineRegressionResponse {
+  Data: [number, number][];
+  Unit: string;
+  Caption: string;
 }
 
 async function fetchENBData(): Promise<ENBData[]> {
@@ -153,6 +177,7 @@ async function fetchENBData(): Promise<ENBData[]> {
         X3: row.UseX3 ? row.CaptionX3 || "" : "未使用",
         X4: row.UseX4 ? row.CaptionX4 || "" : "未使用",
         X5: row.UseX5 ? row.CaptionX5 || "" : "未使用",
+        ebSgt: row.EbSgt,
       };
       // console.log("Transformed item:", result);
       return result;
@@ -166,59 +191,175 @@ async function fetchENBData(): Promise<ENBData[]> {
   }
 }
 
-const mockBaselineDetails: Record<string, BaselineDetails> = {
-  "EnB-003_02_生管公務車ARJ-9205加油公升(L)": {
-    baselineData: [
-      {
-        id: 1,
-        date: "2022-02-14",
-        value: 95.45,
-        X1: 866,
-      },
-    ],
-    regressionData: {
+function transformDate(dateString: string): string {
+  // Remove "/Date(" and ")/" and convert to number
+  const timestamp = parseInt(dateString.replace(/\/Date\((\d+)\)\//, "$1"));
+  const date = new Date(timestamp);
+  return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+}
+
+async function fetchBaselineDetails(ebSgt: number): Promise<BaselineData[]> {
+  try {
+    const response = await fetch(
+      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?EbSgt=${ebSgt}&_search=false&rows=10000&page=1&sidx=StartDate&sord=asc`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Baseline details API responded with status: ${response.status}`
+      );
+    }
+
+    const data: ApiBaselineDetailResponse = await response.json();
+
+    return data.rows.map((row) => ({
+      id: row.EbSgt,
+      date: transformDate(row.StartDate),
+      value: row.Value,
+      X1: row.X1 ?? 0,
+      X2: row.X2 ?? undefined,
+      X3: row.X3 ?? undefined,
+      X4: row.X4 ?? undefined,
+      X5: row.X5 ?? undefined,
+      createdTime: transformDate(row.CreatedTime),
+      updatedTime: transformDate(row.UpdatedTime),
+    }));
+  } catch (error) {
+    console.error("Failed to fetch baseline details:", error);
+    return [];
+  }
+}
+
+async function fetchRegressionStatic(
+  ebSgt: number,
+  feature: string
+): Promise<{
+  regressionData: RegressionData;
+  comparisonData: {
+    date: string;
+    actualValue: number;
+    theoreticalValue: number;
+  }[];
+}> {
+  try {
+    const response = await fetch(
+      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=regressionstatic&EbSgt=${ebSgt}&Feature=${feature}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Regression API responded with status: ${response.status}`
+      );
+    }
+
+    const data: RegressionStaticResponse = await response.json();
+
+    // Helper function to find property value
+    const findProperty = (key: string) => {
+      const prop = data.Property.find(([k]) => k === key);
+      return prop ? prop[1] : "";
+    };
+
+    // Transform the data to match our interfaces
+    const regressionData: RegressionData = {
       quadratic: {
-        a: -8.064,
-        b: 922.0993,
-        c: 14827.471,
-        y: "y = -8.064x^2 + 922.0993x + 14827.471",
-        rSquare: 0.984,
+        a: data.a,
+        b: data.b,
+        c: data.c,
+        y: data.y,
+        rSquare: data.rSquare,
       },
       linear: {
-        X1Label: "X1 溫度超過24度天數",
-        X2Label: "X2 自動壓著機稼動工時",
-        X3Label: "X3 射出機稼動工時",
-        X1Coefficient: 578.7519,
-        X2Coefficient: 7.5047,
-        X3Coefficient: -12.3602,
-        constant: 15112.2625,
-        equation: "Y = 578.7519*X1 + 7.5047*X2 + -12.3602*X3 + 15112.2625",
-        rSquare: 0.9887,
-        MBE: 7.84178458464642e-7,
-        MBEPercentage: -0.43,
-        MAE: 955.574268720711,
-        MAEPercentage: 4.9117,
-        RMSE: 1073.0053,
-        CvRMSE: 4.4871,
-        maxError: 13.48,
+        X1Label: (findProperty("影響因素").split(",")[0] || "").trim(),
+        X2Label: (findProperty("影響因素").split(",")[1] || "").trim(),
+        X3Label: "", // Not provided in the API
+        X1Coefficient: parseFloat(findProperty("X1斜率")),
+        X2Coefficient: parseFloat(findProperty("X2斜率")),
+        X3Coefficient: 0, // Not provided in the API
+        constant: parseFloat(findProperty("截矩")),
+        equation: findProperty("預測公式"),
+        rSquare: parseFloat(findProperty("RSquare")),
+        MBE: parseFloat(findProperty("MBE (均偏差誤差)")),
+        MBEPercentage: parseFloat(findProperty("平均偏差誤差比")),
+        MAE: parseFloat(findProperty("MAE (平均絕對誤差)")),
+        MAEPercentage: parseFloat(findProperty("平均絕對誤差比")),
+        RMSE: parseFloat(findProperty("RMSE (均方根誤差)")),
+        CvRMSE: parseFloat(findProperty("Cv(RMSE) (均方根誤差變異係數)")),
+        maxError: parseFloat(findProperty("最大誤差比(M-S)/S")),
       },
-    },
-    chartData: {
-      X1: {
-        Data: [
-          [140, 24.01, 16.444],
-          [456, 49.2, 67.992],
-        ],
-        Unit: "",
-        Caption: "里程數",
+    };
+
+    // Transform comparison data
+    const comparisonData = data.Category.map((date, index) => ({
+      date,
+      actualValue: data.Qty[0][index],
+      theoreticalValue: data.Qty[1][index],
+    }));
+
+    return {
+      regressionData,
+      comparisonData,
+    };
+  } catch (error) {
+    console.error("Failed to fetch regression static:", error);
+    return {
+      regressionData: {
+        quadratic: {
+          a: 0,
+          b: 0,
+          c: 0,
+          y: "",
+          rSquare: 0,
+        },
+        linear: {
+          X1Label: "",
+          X2Label: "",
+          X3Label: "",
+          X1Coefficient: 0,
+          X2Coefficient: 0,
+          X3Coefficient: 0,
+          constant: 0,
+          equation: "",
+          rSquare: 0,
+          MBE: 0,
+          MBEPercentage: 0,
+          MAE: 0,
+          MAEPercentage: 0,
+          RMSE: 0,
+          CvRMSE: 0,
+          maxError: 0,
+        },
       },
-    },
-    comparisonData: [
-      { date: "2022-02-14", actualValue: 95.45, theoreticalValue: 114.57 },
-      { date: "2022-02-21", actualValue: 110.44, theoreticalValue: 119.08 },
-    ],
-  },
-};
+      comparisonData: [],
+    };
+  }
+}
+
+async function fetchBaselineRegression(
+  ebSgt: number
+): Promise<BaselineRegressionResponse> {
+  try {
+    const response = await fetch(
+      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=baselineregression&EbSgt=${ebSgt}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Baseline regression API responded with status: ${response.status}`
+      );
+    }
+
+    const data: BaselineRegressionResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch baseline regression:", error);
+    return {
+      Data: [],
+      Unit: "",
+      Caption: "",
+    };
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -226,9 +367,50 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     try {
-      const data = await fetchENBData();
+      const ebSgt = req.query.ebSgt;
+      const feature = req.query.feature;
 
-      // Only process these if we have data
+      if (ebSgt && !Array.isArray(ebSgt)) {
+        if (feature && !Array.isArray(feature)) {
+          // Fetch all required data
+          const [regressionStatic, baselineDetails, baselineRegression] =
+            await Promise.all([
+              fetchRegressionStatic(Number(ebSgt), feature),
+              fetchBaselineDetails(Number(ebSgt)),
+              fetchBaselineRegression(Number(ebSgt)),
+            ]);
+
+          // Calculate regression line points
+          const { a, b, c } = regressionStatic.regressionData.quadratic;
+          const xValues = baselineRegression.Data.map((point) => point[0]);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const step = (maxX - minX) / 100;
+
+          const regressionPoints: [number, number][] = [];
+          for (let x = minX; x <= maxX; x += step) {
+            const y = a * x * x + b * x + c;
+            regressionPoints.push([x, y]);
+          }
+
+          return res.status(200).json({
+            baselineDetails,
+            regressionData: regressionStatic.regressionData,
+            comparisonData: regressionStatic.comparisonData,
+            chartData: {
+              scatterData: baselineRegression.Data,
+              regressionLine: regressionPoints,
+              unit: baselineRegression.Unit,
+              caption: baselineRegression.Caption,
+            },
+          });
+        }
+        // If no feature provided, just return baseline details
+        const details = await fetchBaselineDetails(Number(ebSgt));
+        return res.status(200).json({ baselineDetails: details });
+      }
+
+      const data = await fetchENBData();
       const targetItems = Array.from(
         new Set(data.map((item) => item.targetItem))
       ).filter(Boolean);
@@ -250,11 +432,9 @@ export default async function handler(
         workAreas,
         sharedGroups,
         lockedStates,
-        baselineDetails: mockBaselineDetails,
       });
     } catch (error) {
       console.error("API Error:", error);
-      // Return a more detailed error response
       res.status(500).json({
         message: "Internal Server Error",
         error: error instanceof Error ? error.message : String(error),

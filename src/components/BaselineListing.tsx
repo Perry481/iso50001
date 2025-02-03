@@ -19,6 +19,7 @@ interface BaselineItem {
   X3?: string;
   X4?: string;
   X5?: string;
+  ebSgt: number;
 }
 
 interface BaselineListingProps {
