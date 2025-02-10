@@ -249,55 +249,30 @@ export default function ENB() {
           return value ? value.toFixed(2) : "-";
         },
       },
-      {
-        accessorKey: "createdTime",
-        header: "建立時間",
-        size: 110,
-        Header: () => (
-          <Tooltip title="建立時間" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>建立時間</span>
-            </div>
-          </Tooltip>
-        ),
-      },
-      {
-        accessorKey: "updatedTime",
-        header: "更新時間",
-        size: 110,
-        Header: () => (
-          <Tooltip title="更新時間" {...tooltipProps}>
-            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-              <span>更新時間</span>
-            </div>
-          </Tooltip>
-        ),
-      },
     ];
 
-    const xColumns = ["X1", "X2", "X3", "X4", "X5"].map((key) => ({
-      accessorKey: key,
-      header: key,
-      size: 110,
-      Header: () => (
-        <Tooltip
-          title={selectedBaseline?.[key as keyof ENBData] || key}
-          {...tooltipProps}
-        >
-          <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
-            <span>{key}</span>
-          </div>
-        </Tooltip>
-      ),
-      Cell: ({ cell }: { cell: MRT_Cell<BaselineData> }) => {
-        const value = cell.getValue<number>();
-        return typeof value === "number" ? value.toFixed(2) : "-";
-      },
-      enableEditing: selectedBaseline
-        ? selectedBaseline[key as keyof ENBData] !== "未使用" &&
-          selectedBaseline[key as keyof ENBData] !== ""
-        : true,
-    }));
+    const xColumns = ["X1", "X2", "X3", "X4", "X5"].map((key) => {
+      const xLabel = selectedBaseline?.[key as keyof ENBData];
+      const isUsed = xLabel !== "未使用" && xLabel !== "";
+
+      return {
+        accessorKey: key,
+        header: isUsed ? (xLabel as string) : key,
+        size: 110,
+        Header: () => (
+          <Tooltip title={xLabel || key} {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>{isUsed ? xLabel : key}</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }: { cell: MRT_Cell<BaselineData> }) => {
+          const value = cell.getValue<number>();
+          return typeof value === "number" ? value.toFixed(2) : "-";
+        },
+        enableEditing: isUsed,
+      };
+    });
 
     return [...baseColumns, ...xColumns];
   }, [selectedBaseline]);
@@ -447,6 +422,8 @@ export default function ENB() {
             baseline[x as keyof ENBFormData] !== "未使用" &&
             baseline[x as keyof ENBFormData] !== ""
         ) || "X1";
+
+      // Set the selected X first so the useEffect doesn't trigger an extra fetch
       setSelectedX(initialX);
 
       const response = await fetch(
@@ -495,11 +472,6 @@ export default function ENB() {
         comparisonData: data.comparisonData || [],
       };
 
-      setBaselineDetails((prev) => ({
-        ...prev,
-        [baseline.baselineCode]: newBaselineDetails,
-      }));
-
       // Convert ENBFormData to ENBData
       const enbData: ENBData = {
         baselineCode: baseline.baselineCode,
@@ -517,6 +489,13 @@ export default function ENB() {
         ebSgt: baseline.ebSgt || 0,
       };
 
+      // Set the baseline details first
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [baseline.baselineCode]: newBaselineDetails,
+      }));
+
+      // Then set the selected baseline
       setSelectedBaseline(enbData);
       setShowListing(false);
     } catch (error) {
@@ -587,6 +566,26 @@ export default function ENB() {
         selectedBaseline[x as keyof ENBData] !== ""
     );
   }, [selectedBaseline]);
+
+  const handleXChange = (newX: string) => {
+    // Clear chart data first
+    if (selectedBaseline) {
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [selectedBaseline.baselineCode]: {
+          ...prev[selectedBaseline.baselineCode],
+          chartData: {
+            scatterData: [],
+            regressionLine: [],
+            unit: "",
+            caption: "",
+          },
+        },
+      }));
+    }
+    // Then set the new X value which will trigger the data fetch
+    setSelectedX(newX);
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -669,7 +668,7 @@ export default function ENB() {
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2">
               <span>影響因素:</span>
-              <Select value={selectedX} onValueChange={setSelectedX}>
+              <Select value={selectedX} onValueChange={handleXChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="選擇影響因素" />
                 </SelectTrigger>
@@ -687,8 +686,10 @@ export default function ENB() {
             <div className="h-[400px]">
               {currentBaselineDetails?.chartData && (
                 <ReactECharts
+                  key={`regression-chart-${selectedX}`}
                   style={{ height: "100%" }}
                   option={{
+                    animation: true,
                     grid: {
                       top: 90,
                       right: 20,
@@ -700,6 +701,41 @@ export default function ENB() {
                       trigger: "axis",
                       axisPointer: {
                         type: "cross",
+                      },
+                      formatter: (
+                        params: Array<{
+                          data?: [number, number];
+                          marker?: string;
+                          seriesName?: string;
+                          color?: string;
+                        }>
+                      ) => {
+                        const xValue = params[0]?.data?.[0];
+                        if (!xValue) return "";
+
+                        // Find both values for this x coordinate
+                        const actualPoint = params.find(
+                          (p) => p.seriesName === "實際值"
+                        );
+                        const regressionPoint = params.find(
+                          (p) => p.seriesName === "回歸線"
+                        );
+
+                        return [
+                          xValue,
+                          actualPoint?.data?.[1] != null
+                            ? `${
+                                actualPoint.marker
+                              } 實際值: ${actualPoint.data[1].toFixed(2)}`
+                            : "",
+                          regressionPoint?.data?.[1] != null
+                            ? `${
+                                regressionPoint.marker
+                              } 回歸線: ${regressionPoint.data[1].toFixed(2)}`
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join("<br/>");
                       },
                     },
                     title: [
@@ -761,8 +797,25 @@ export default function ENB() {
                           width: 2,
                           type: "solid",
                         },
+                        label: {
+                          show: true,
+                          formatter:
+                            currentBaselineDetails.regressionData.quadratic.y ||
+                            "",
+                          position: "end",
+                          color: "#4CAF50",
+                          fontSize: 13,
+                          backgroundColor: "rgba(255, 255, 255, 0.7)",
+                          padding: [4, 8],
+                          borderRadius: 4,
+                        },
                       },
                     ],
+                  }}
+                  onEvents={{
+                    finished: () => {
+                      console.log(`Chart redrawn for ${selectedX}`);
+                    },
                   }}
                 />
               )}

@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { energyECFService } from "@/lib/energy-ecf/service";
 
 interface IndicatorData {
   date: string;
@@ -22,6 +23,7 @@ interface IndicatorData {
   theoreticalValue: number;
   maxDeviation: number;
   deviation: number;
+  remark: string | null;
   [key: string]: number | string | null;
 }
 
@@ -29,7 +31,11 @@ interface Indicator {
   id: string;
   name: string;
   baselineCode: string;
-  energyType: string;
+  energyType: {
+    id: string;
+    name: string;
+    unit: string;
+  };
   unit: string;
   startDate: string;
   frequency: "月" | "週";
@@ -42,9 +48,15 @@ interface DataPoint extends BaseItem {
   title: string;
   date: string;
   actualValue: number;
+  X1: number | null;
+  X2: number | null;
+  X3: number | null;
+  X4: number | null;
+  X5: number | null;
   theoreticalValue: number;
   maxDeviation: number;
   deviation: number;
+  remark: string | null;
 }
 
 const tooltipProps = {
@@ -102,17 +114,48 @@ export default function ENPI() {
     useState<DataPoint | null>(null);
 
   useEffect(() => {
-    const loadIndicators = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch("/api/enpi");
-        const data = await response.json();
-        setIndicators(data.indicators || []);
+        const [indicatorsResponse, ecfsData] = await Promise.all([
+          fetch("/api/enpi"),
+          energyECFService.getECFs(),
+        ]);
+
+        const indicatorsData = await indicatorsResponse.json();
+
+        if (indicatorsData.indicators) {
+          // Map ECF data to indicators
+          const mappedIndicators = indicatorsData.indicators.map(
+            (
+              indicator: Omit<Indicator, "energyType"> & {
+                energyType: {
+                  id: string;
+                  name: string;
+                  unit: string;
+                };
+              }
+            ) => ({
+              ...indicator,
+              energyType: {
+                id: indicator.energyType.id,
+                name:
+                  ecfsData.find((ecf) => ecf.code === indicator.energyType.id)
+                    ?.name || "(未設定)",
+                unit:
+                  ecfsData.find((ecf) => ecf.code === indicator.energyType.id)
+                    ?.unit || indicator.energyType.unit,
+              },
+            })
+          );
+
+          setIndicators(mappedIndicators);
+        }
       } catch (error) {
-        console.error("Failed to load indicators:", error);
+        console.error("Failed to load data:", error);
       }
     };
 
-    void loadIndicators();
+    void loadData();
   }, []);
 
   // Transform indicators to BaseItems for the ListingPage component
@@ -151,13 +194,8 @@ export default function ENPI() {
 
   const handleDeleteConfirmed = async (indicator: Indicator) => {
     try {
-      await fetch(`/api/enpi?id=${encodeURIComponent(indicator.id)}`, {
-        method: "DELETE",
-      });
-
-      const response = await fetch("/api/enpi");
-      const data = await response.json();
-      setIndicators(data.indicators);
+      // TODO: Implement delete functionality when API is ready
+      console.log("Delete indicator:", indicator);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete indicator:", error);
@@ -166,32 +204,8 @@ export default function ENPI() {
 
   const handleIndicatorSubmit = async (data: EnpiFormData) => {
     try {
-      const response = await fetch("/api/enpi", {
-        method: editingIndicator ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "indicator",
-          data: {
-            id: editingIndicator?.id,
-            name: data.title,
-            baselineCode: data.baselineCode,
-            energyType: data.energyType,
-            unit: data.unit,
-            startDate: data.startDate,
-            frequency: data.frequency,
-            dataType: data.dataType,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save indicator");
-      }
-
-      const refreshResponse = await fetch("/api/enpi");
-      const refreshData = await refreshResponse.json();
-      setIndicators(refreshData.indicators);
-
+      // TODO: Implement create/update functionality when API is ready
+      console.log("Submit indicator data:", data);
       setDialogOpen(false);
       setEditingIndicator(undefined);
     } catch (error) {
@@ -218,11 +232,14 @@ export default function ENPI() {
             </span>
           </div>
         </div>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>能源類型: {indicator.energyType}</p>
+        <div className="text-sm text-gray-600 grid grid-cols-2 gap-x-4 gap-y-1">
+          <p>能源類型: {indicator.energyType.name}</p>
           <p>單位: {indicator.unit}</p>
           <p>數據類型: {indicator.dataType}</p>
           <p>開始日期: {indicator.startDate}</p>
+          <p className="col-span-2">
+            備註: {indicator.data?.[0]?.remark || "(無)"}
+          </p>
         </div>
       </div>
     );
@@ -255,6 +272,86 @@ export default function ENPI() {
         ),
         Cell: ({ cell }) => {
           const value = cell.getValue<number>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "X1",
+        header: "X1",
+        size: 120,
+        Header: () => (
+          <Tooltip title="X1" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>X1</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number | null>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "X2",
+        header: "X2",
+        size: 120,
+        Header: () => (
+          <Tooltip title="X2" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>X2</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number | null>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "X3",
+        header: "X3",
+        size: 120,
+        Header: () => (
+          <Tooltip title="X3" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>X3</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number | null>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "X4",
+        header: "X4",
+        size: 120,
+        Header: () => (
+          <Tooltip title="X4" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>X4</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number | null>();
+          return value ? value.toFixed(2) : "-";
+        },
+      },
+      {
+        accessorKey: "X5",
+        header: "X5",
+        size: 120,
+        Header: () => (
+          <Tooltip title="X5" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>X5</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<number | null>();
           return value ? value.toFixed(2) : "-";
         },
       },
@@ -306,6 +403,22 @@ export default function ENPI() {
           return value ? value.toFixed(2) : "-";
         },
       },
+      {
+        accessorKey: "remark",
+        header: "備註",
+        size: 200,
+        Header: () => (
+          <Tooltip title="備註" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>備註</span>
+            </div>
+          </Tooltip>
+        ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<string | null>();
+          return value || "-";
+        },
+      },
     ],
     []
   );
@@ -326,27 +439,8 @@ export default function ENPI() {
 
   const handleDataPointSubmit = async (data: Omit<DataPoint, "id">) => {
     try {
-      const response = await fetch("/api/enpi", {
-        method: editingDataPoint ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "dataPoint",
-          indicatorId: currentIndicator?.id,
-          data: {
-            id: editingDataPoint?.id,
-            ...data,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save data point");
-      }
-
-      const refreshResponse = await fetch("/api/enpi");
-      const refreshData = await refreshResponse.json();
-      setIndicators(refreshData.indicators);
-
+      // TODO: Implement create/update functionality when API is ready
+      console.log("Submit data point:", data);
       setDetailDialogOpen(false);
       setEditingDataPoint(undefined);
     } catch (error) {
@@ -356,16 +450,8 @@ export default function ENPI() {
 
   const handleDeleteDataPointConfirmed = async (dataPoint: DataPoint) => {
     try {
-      await fetch(
-        `/api/enpi?type=dataPoint&id=${encodeURIComponent(dataPoint.id)}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      const response = await fetch("/api/enpi");
-      const data = await response.json();
-      setIndicators(data.indicators);
+      // TODO: Implement delete functionality when API is ready
+      console.log("Delete data point:", dataPoint);
       setDeleteDataPointConfirm(null);
     } catch (error) {
       console.error("Failed to delete data point:", error);
@@ -377,7 +463,17 @@ export default function ENPI() {
     currentIndicator?.data.map((item, index) => ({
       id: `${currentIndicator.id}_${index}`,
       title: `${item.date}`,
-      ...item,
+      date: item.date,
+      actualValue: item.actualValue,
+      X1: typeof item.X1 === "number" ? item.X1 : null,
+      X2: typeof item.X2 === "number" ? item.X2 : null,
+      X3: typeof item.X3 === "number" ? item.X3 : null,
+      X4: typeof item.X4 === "number" ? item.X4 : null,
+      X5: typeof item.X5 === "number" ? item.X5 : null,
+      theoreticalValue: item.theoreticalValue,
+      maxDeviation: item.maxDeviation,
+      deviation: item.deviation,
+      remark: item.remark,
     })) || [];
 
   const chartOption = useMemo(() => {
@@ -485,6 +581,7 @@ export default function ENPI() {
                 startDate: editingIndicator.startDate,
                 frequency: editingIndicator.frequency,
                 dataType: editingIndicator.dataType,
+                remark: editingIndicator.data?.[0]?.remark || null,
               }
             : undefined
         }
@@ -513,6 +610,36 @@ export default function ENPI() {
             required: true,
           },
           {
+            key: "X1",
+            label: "X1",
+            type: "number",
+            required: false,
+          },
+          {
+            key: "X2",
+            label: "X2",
+            type: "number",
+            required: false,
+          },
+          {
+            key: "X3",
+            label: "X3",
+            type: "number",
+            required: false,
+          },
+          {
+            key: "X4",
+            label: "X4",
+            type: "number",
+            required: false,
+          },
+          {
+            key: "X5",
+            label: "X5",
+            type: "number",
+            required: false,
+          },
+          {
             key: "theoreticalValue",
             label: "理論值",
             type: "number",
@@ -529,6 +656,12 @@ export default function ENPI() {
             label: "最大偏差率 (%)",
             type: "number",
             required: true,
+          },
+          {
+            key: "remark",
+            label: "備註",
+            type: "text",
+            required: false,
           },
         ]}
       />

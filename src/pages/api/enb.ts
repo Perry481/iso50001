@@ -336,11 +336,12 @@ async function fetchRegressionStatic(
 }
 
 async function fetchBaselineRegression(
-  ebSgt: number
+  ebSgt: number,
+  feature: string
 ): Promise<BaselineRegressionResponse> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=baselineregression&EbSgt=${ebSgt}`
+      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=baselineregression&EbSgt=${ebSgt}&Feature=${feature}`
     );
 
     if (!response.ok) {
@@ -377,28 +378,29 @@ export default async function handler(
             await Promise.all([
               fetchRegressionStatic(Number(ebSgt), feature),
               fetchBaselineDetails(Number(ebSgt)),
-              fetchBaselineRegression(Number(ebSgt)),
+              fetchBaselineRegression(Number(ebSgt), feature),
             ]);
 
           // Calculate regression line points
           const { a, b, c } = regressionStatic.regressionData.quadratic;
-          const xValues = baselineRegression.Data.map((point) => point[0]);
-          const minX = Math.min(...xValues);
-          const maxX = Math.max(...xValues);
-          const step = (maxX - minX) / 100;
 
-          const regressionPoints: [number, number][] = [];
-          for (let x = minX; x <= maxX; x += step) {
+          // Instead of generating evenly spaced points, calculate regression values for each scatter point
+          const scatterPoints = baselineRegression.Data;
+          const regressionPoints = scatterPoints.map(([x]) => {
             const y = a * x * x + b * x + c;
-            regressionPoints.push([x, y]);
-          }
+            return [x, y];
+          });
+
+          // Sort both arrays by x value to ensure proper line drawing
+          scatterPoints.sort((a, b) => a[0] - b[0]);
+          regressionPoints.sort((a, b) => a[0] - b[0]);
 
           return res.status(200).json({
             baselineDetails,
             regressionData: regressionStatic.regressionData,
             comparisonData: regressionStatic.comparisonData,
             chartData: {
-              scatterData: baselineRegression.Data,
+              scatterData: scatterPoints,
               regressionLine: regressionPoints,
               unit: baselineRegression.Unit,
               caption: baselineRegression.Caption,

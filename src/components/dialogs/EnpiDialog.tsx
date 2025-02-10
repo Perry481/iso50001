@@ -16,15 +16,22 @@ import {
 } from "../ui/select";
 import { useState, useEffect } from "react";
 import { DatePicker } from "../ui/date-picker";
+import { energyECFService } from "@/lib/energy-ecf/service";
+import type { ECF } from "@/lib/energy-ecf/types";
 
 export interface EnpiFormData {
   title: string;
   baselineCode: string;
-  energyType: string;
+  energyType: {
+    id: string;
+    name: string;
+    unit: string;
+  };
   unit: string;
   startDate: string;
-  frequency: "月" | "週" | "日" | "季";
+  frequency: "月" | "週";
   dataType: string;
+  remark?: string | null;
 }
 
 interface EnpiDialogProps {
@@ -45,27 +52,27 @@ export function EnpiDialog({
   const [formData, setFormData] = useState<EnpiFormData>({
     title: "",
     baselineCode: "",
-    energyType: "未設定",
+    energyType: {
+      id: "",
+      name: "(未設定)",
+      unit: "",
+    },
     unit: "",
     startDate: "",
     frequency: "月",
     dataType: "單一量測",
+    remark: null,
   });
 
-  const [energyTypes, setEnergyTypes] = useState<string[]>([]);
-  const [frequencies, setFrequencies] = useState<string[]>([]);
-  const [dataTypes, setDataTypes] = useState<string[]>([]);
-  const [units, setUnits] = useState<string[]>([]);
+  const [energyTypes, setEnergyTypes] = useState<ECF[]>([]);
+  const [frequencies] = useState<string[]>(["月", "週"]);
+  const [dataTypes] = useState<string[]>(["單一量測", "比率分析"]);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const response = await fetch("/api/enpi");
-        const data = await response.json();
-        setEnergyTypes(data.energyTypes || []);
-        setFrequencies(data.frequencies || []);
-        setDataTypes(data.dataTypes || []);
-        setUnits(data.units || []);
+        const ecfs = await energyECFService.getECFs();
+        setEnergyTypes(ecfs);
       } catch (error) {
         console.error("Failed to load options:", error);
       }
@@ -79,11 +86,16 @@ export function EnpiDialog({
       setFormData({
         title: initialData?.title || "",
         baselineCode: initialData?.baselineCode || "",
-        energyType: initialData?.energyType || "未設定",
+        energyType: initialData?.energyType || {
+          id: "",
+          name: "(未設定)",
+          unit: "",
+        },
         unit: initialData?.unit || "",
         startDate: initialData?.startDate || "",
         frequency: initialData?.frequency || "月",
         dataType: initialData?.dataType || "單一量測",
+        remark: initialData?.remark || null,
       });
     }
   }, [open, initialData]);
@@ -92,9 +104,24 @@ export function EnpiDialog({
     onSubmit(formData);
   };
 
+  const handleEnergyTypeChange = (id: string) => {
+    const selectedType = energyTypes.find((type) => type.id === id);
+    if (selectedType) {
+      setFormData({
+        ...formData,
+        energyType: {
+          id: selectedType.id,
+          name: selectedType.name,
+          unit: selectedType.unit,
+        },
+        unit: selectedType.unit,
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] DialogContent">
+      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto DialogContent">
         <DialogHeader>
           <DialogTitle className="DialogTitle">
             {mode === "create" ? "新增指標" : "編輯指標"}
@@ -139,18 +166,16 @@ export function EnpiDialog({
               能源類型
             </label>
             <Select
-              value={formData.energyType}
-              onValueChange={(value: string) =>
-                setFormData({ ...formData, energyType: value })
-              }
+              value={formData.energyType.id}
+              onValueChange={handleEnergyTypeChange}
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="選擇能源類型" />
               </SelectTrigger>
               <SelectContent>
                 {energyTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -161,23 +186,12 @@ export function EnpiDialog({
             <label htmlFor="unit" className="text-right">
               單位
             </label>
-            <Select
+            <Input
+              id="unit"
               value={formData.unit}
-              onValueChange={(value: string) =>
-                setFormData({ ...formData, unit: value })
-              }
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="選擇單位" />
-              </SelectTrigger>
-              <SelectContent>
-                {units.map((unit) => (
-                  <SelectItem key={unit} value={unit}>
-                    {unit}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              disabled
+              className="col-span-3"
+            />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
@@ -209,7 +223,7 @@ export function EnpiDialog({
             </label>
             <Select
               value={formData.frequency}
-              onValueChange={(value: "月" | "週" | "日" | "季") =>
+              onValueChange={(value: "月" | "週") =>
                 setFormData({ ...formData, frequency: value })
               }
             >
@@ -238,6 +252,21 @@ export function EnpiDialog({
                 }
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label htmlFor="remark" className="text-right">
+              備註
+            </label>
+            <Input
+              id="remark"
+              value={formData.remark || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, remark: e.target.value })
+              }
+              className="col-span-3"
+              placeholder="請輸入備註"
+            />
           </div>
         </div>
         <div className="flex justify-end gap-3">
