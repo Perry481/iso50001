@@ -198,6 +198,8 @@ export default function ENB() {
   const [items, setItems] = useState<ENBData[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<ENBData | null>(null);
+  const [deleteDetailConfirm, setDeleteDetailConfirm] =
+    useState<BaselineData | null>(null);
   const [dialogState, setDialogState] = useState<{
     open: boolean;
     mode: "create" | "edit";
@@ -363,40 +365,61 @@ export default function ENB() {
   };
 
   const handleDeleteConfirmed = async (item: ENBData) => {
-    // TODO: Implement delete functionality
-    console.log("Delete item:", item);
-    setDeleteConfirm(null);
+    try {
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setItems((prev) => {
+        const newItems = prev.filter(
+          (i) => i.baselineCode !== item.baselineCode
+        );
+        // Calculate if we need to adjust the current page
+        const totalPages = Math.max(1, Math.ceil(newItems.length / 4)); // 4 is itemsPerPage
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages);
+        }
+        return newItems;
+      });
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error("Failed to delete baseline:", error);
+    }
   };
 
   const handleSubmit = async (formData: ENBFormData) => {
-    // Convert ENBFormData back to ENBData
-    const enbData: ENBData = {
-      baselineCode: formData.baselineCode,
-      targetItem: formData.targetItem,
-      energyType: formData.energyType,
-      workArea: formData.workArea,
-      sharedGroup: formData.sharedGroup,
-      locked: formData.locked,
-      note: formData.note,
-      X1: formData.X1,
-      X2: formData.X2,
-      X3: formData.X3,
-      X4: formData.X4,
-      X5: formData.X5,
-      ebSgt: formData.ebSgt || 0,
-    };
+    try {
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      const enbData: ENBData = {
+        baselineCode: formData.baselineCode,
+        targetItem: formData.targetItem,
+        energyType: formData.energyType,
+        workArea: formData.workArea,
+        sharedGroup: formData.sharedGroup,
+        locked: formData.locked,
+        note: formData.note,
+        X1: formData.X1,
+        X2: formData.X2,
+        X3: formData.X3,
+        X4: formData.X4,
+        X5: formData.X5,
+        ebSgt: formData.ebSgt || 0,
+      };
 
-    console.log("Submit data:", enbData);
-    if (dialogState.mode === "create") {
-      // Add new item
-      setItems([...items, enbData]);
-    } else {
-      // Update existing item
-      setItems(
-        items.map((item) =>
-          item.baselineCode === enbData.baselineCode ? enbData : item
-        )
-      );
+      if (dialogState.mode === "create") {
+        // Create new item
+        setItems((prev) => [...prev, enbData]);
+      } else {
+        // Update existing item
+        setItems((prev) =>
+          prev.map((item) =>
+            item.baselineCode === enbData.baselineCode ? enbData : item
+          )
+        );
+      }
+
+      setDialogState({ open: false, mode: "create" });
+    } catch (error) {
+      console.error("Failed to save baseline:", error);
     }
   };
 
@@ -513,59 +536,70 @@ export default function ENB() {
     setDetailDialogOpen(true);
   };
 
-  const handleDeleteDetail = async (row: BaselineData) => {
-    if (
-      !selectedBaseline ||
-      !currentBaselineDetails ||
-      !confirm("確定要刪除此筆資料嗎？")
-    )
-      return;
+  const handleDeleteDetail = (row: BaselineData) => {
+    setDeleteDetailConfirm(row);
+  };
 
-    setBaselineDetails((prev) => ({
-      ...prev,
-      [selectedBaseline.baselineCode]: {
-        ...currentBaselineDetails,
-        baselineData: currentBaselineDetails.baselineData.filter(
-          (item) => item.id !== row.id
-        ),
-      },
-    }));
+  const handleDetailSubmit = async (data: Omit<BaselineData, "id">) => {
+    if (!selectedBaseline || !currentBaselineDetails) return;
+
+    try {
+      const newData = editingDetail
+        ? currentBaselineDetails.baselineData.map((item) =>
+            item.date === editingDetail.date
+              ? { ...data, id: editingDetail.id }
+              : item
+          )
+        : [
+            ...currentBaselineDetails.baselineData,
+            {
+              ...data,
+              // Create a unique ID using timestamp and date
+              id: `${Date.now()}_${data.date.replace(/-/g, "")}`,
+              createdTime: new Date().toISOString(),
+              updatedTime: new Date().toISOString(),
+            },
+          ];
+
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [selectedBaseline.baselineCode]: {
+          ...currentBaselineDetails,
+          baselineData: newData,
+        },
+      }));
+
+      setDetailDialogOpen(false);
+      setEditingDetail(undefined);
+    } catch (error) {
+      console.error("Failed to save baseline detail:", error);
+    }
+  };
+
+  const handleDeleteDetailConfirmed = async (row: BaselineData) => {
+    if (!selectedBaseline || !currentBaselineDetails) return;
+
+    try {
+      const updatedBaselineData = currentBaselineDetails.baselineData.filter(
+        (item) => item.date !== row.date || item.value !== row.value
+      );
+
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [selectedBaseline.baselineCode]: {
+          ...prev[selectedBaseline.baselineCode],
+          baselineData: updatedBaselineData,
+        },
+      }));
+      setDeleteDetailConfirm(null);
+    } catch (error) {
+      console.error("Failed to delete baseline detail:", error);
+    }
   };
 
   const currentBaselineDetails = selectedBaseline
     ? baselineDetails[selectedBaseline.baselineCode]
     : undefined;
-
-  const handleDetailSubmit = async (data: Omit<BaselineData, "id">) => {
-    if (!selectedBaseline || !currentBaselineDetails) return;
-
-    const newData = editingDetail
-      ? currentBaselineDetails.baselineData.map((item) =>
-          item.date === editingDetail.date
-            ? { ...data, id: editingDetail.id }
-            : item
-        )
-      : [...currentBaselineDetails.baselineData, { ...data, id: Date.now() }];
-
-    setBaselineDetails((prev) => ({
-      ...prev,
-      [selectedBaseline.baselineCode]: {
-        ...currentBaselineDetails,
-        baselineData: newData,
-      },
-    }));
-
-    setDetailDialogOpen(false);
-  };
-
-  const availableXs = useMemo(() => {
-    if (!selectedBaseline) return ["X1"];
-    return ["X1", "X2", "X3", "X4", "X5"].filter(
-      (x) =>
-        selectedBaseline[x as keyof ENBData] !== "未使用" &&
-        selectedBaseline[x as keyof ENBData] !== ""
-    );
-  }, [selectedBaseline]);
 
   const handleXChange = (newX: string) => {
     // Clear chart data first
@@ -673,7 +707,7 @@ export default function ENB() {
                   <SelectValue placeholder="選擇影響因素" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableXs.map((x) => (
+                  {["X1", "X2", "X3", "X4", "X5"].map((x) => (
                     <SelectItem key={x} value={x}>
                       {`${x}: ${selectedBaseline?.[x as keyof ENBData]}`}
                     </SelectItem>
@@ -934,7 +968,7 @@ export default function ENB() {
         fields={getActiveDetailFields}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog for Baseline */}
       <Dialog
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
@@ -956,6 +990,40 @@ export default function ENB() {
               variant="destructive"
               onClick={() =>
                 deleteConfirm && handleDeleteConfirmed(deleteConfirm)
+              }
+            >
+              刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog for Baseline Detail */}
+      <Dialog
+        open={!!deleteDetailConfirm}
+        onOpenChange={() => setDeleteDetailConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除基線明細</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600 text-center">
+            您確定要刪除此筆基線明細嗎？
+            <br />
+            此操作無法復原。
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDetailConfirm(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteDetailConfirm &&
+                handleDeleteDetailConfirmed(deleteDetailConfirm)
               }
             >
               刪除

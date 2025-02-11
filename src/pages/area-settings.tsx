@@ -213,27 +213,24 @@ export default function AreaSettings() {
 
   const handleSubmit = async (data: Omit<Area, "id">) => {
     try {
-      const response = await fetch("/api/area-settings", {
-        method: editingArea ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingArea && "id" in editingArea) {
+        // Update existing area
+        const updatedArea = {
           ...data,
-          id: editingArea?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save area");
-      }
-
-      const result = await response.json();
-
-      if (editingArea) {
+          id: editingArea.id,
+        };
         setAreas((prev) =>
-          prev.map((area) => (area.id === editingArea.id ? result.area : area))
+          prev.map((area) => (area.id === editingArea.id ? updatedArea : area))
         );
       } else {
-        setAreas((prev) => [...prev, result.area]);
+        // Create new area with a temporary ID
+        const newArea = {
+          ...data,
+          id: `temp_${Date.now()}`,
+        };
+        setAreas((prev) => [...prev, newArea]);
       }
 
       setDialogOpen(false);
@@ -245,14 +242,8 @@ export default function AreaSettings() {
 
   const handleDeleteConfirmed = async (area: Area) => {
     try {
-      const response = await fetch(`/api/area-settings/${area.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete area");
-      }
-
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
       setAreas((prev) => prev.filter((a) => a.id !== area.id));
       setDeleteConfirm(null);
     } catch (error) {
@@ -292,7 +283,7 @@ export default function AreaSettings() {
             <DialogTitle>確認刪除場域</DialogTitle>
           </DialogHeader>
           <p className="text-gray-600 text-center">
-            您確定要刪除場域 &ldquo;{deleteConfirm?.name}&rdquo; ���？
+            您確定要刪除場域 &ldquo;{deleteConfirm?.name}&rdquo;？
             <br />
             此操作無法復原。
           </p>

@@ -440,29 +440,26 @@ export default function EnergyEquipment() {
 
   const handleSubmit = async (data: Omit<Equipment, "id">) => {
     try {
-      const response = await fetch("/api/energy-equipment", {
-        method: editingEquipment ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingEquipment && "id" in editingEquipment) {
+        // Update existing equipment
+        const updatedEquipment = {
           ...data,
-          id: editingEquipment?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save equipment");
-      }
-
-      const result = await response.json();
-
-      if (editingEquipment) {
+          id: editingEquipment.id,
+        };
         setEquipments((prev) =>
           prev.map((equipment) =>
-            equipment.id === editingEquipment.id ? result.equipment : equipment
+            equipment.id === editingEquipment.id ? updatedEquipment : equipment
           )
         );
       } else {
-        setEquipments((prev) => [...prev, result.equipment]);
+        // Create new equipment with a temporary ID
+        const newEquipment = {
+          ...data,
+          id: `temp_${Date.now()}`,
+        };
+        setEquipments((prev) => [...prev, newEquipment]);
       }
 
       setDialogOpen(false);
@@ -474,14 +471,8 @@ export default function EnergyEquipment() {
 
   const handleDeleteConfirmed = async (equipment: Equipment) => {
     try {
-      const response = await fetch(`/api/energy-equipment/${equipment.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete equipment");
-      }
-
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
       setEquipments((prev) => prev.filter((e) => e.id !== equipment.id));
       setDeleteConfirm(null);
     } catch (error) {

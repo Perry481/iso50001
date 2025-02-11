@@ -458,25 +458,27 @@ export default function EnergyECF() {
         return;
       }
 
-      const response = await fetch("/api/energy-review", {
-        method: editingDetail ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "detail",
-          reportTitle: selectedReport.title,
-          data: data,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save detail");
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingDetail) {
+        // Update existing detail
+        const updatedDetail = {
+          ...data,
+          id: editingDetail.id,
+        };
+        setDetails((prev) =>
+          prev.map((detail) =>
+            detail.id === editingDetail.id ? updatedDetail : detail
+          )
+        );
+      } else {
+        // Create new detail with a temporary ID
+        const newDetail = {
+          ...data,
+          id: `temp_${Date.now()}`,
+        };
+        setDetails((prev) => [...prev, newDetail]);
       }
-
-      const refreshResponse = await fetch(
-        `/api/energy-review?title=${encodeURIComponent(selectedReport.title)}`
-      );
-      const refreshData = await refreshResponse.json();
-      setDetails(refreshData.details);
 
       setDetailDialogOpen(false);
       setEditingDetail(undefined);
@@ -497,6 +499,7 @@ export default function EnergyECF() {
 
       // Create a form entry for each selected equipment
       const formEntries = selectedEquipments.map((equipment) => ({
+        id: `temp_${Date.now()}_${equipment.id}`,
         // Equipment identification
         equipmentId: equipment.id,
         // Device-specific data from the equipment
@@ -521,18 +524,11 @@ export default function EnergyECF() {
         performanceEvaluation: data.performanceEvaluation,
       }));
 
-      // Log the data being saved in a more concise structure
-      console.log("Detail data that would be saved:", {
-        report: {
-          title: selectedReport.title,
-          details: formEntries,
-        },
-      });
-
-      // Close the dialog after logging
+      // Add all new entries to the details state
+      setDetails((prev) => [...prev, ...formEntries]);
       setDetailCheckboxDialogOpen(false);
     } catch (error) {
-      console.error("Error logging detail data:", error);
+      console.error("Error saving detail data:", error);
     }
   };
 
@@ -543,21 +539,9 @@ export default function EnergyECF() {
         return;
       }
 
-      await fetch(`/api/energy-review`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "detail",
-          reportTitle: selectedReport.title,
-          detailId: detail.id,
-        }),
-      });
-
-      const response = await fetch(
-        `/api/energy-review?title=${encodeURIComponent(selectedReport.title)}`
-      );
-      const data = await response.json();
-      setDetails(data.details);
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setDetails((prev) => prev.filter((d) => d.id !== detail.id));
       setDeleteDetailConfirm(null);
     } catch (error) {
       console.error("Failed to delete detail:", error);
@@ -594,22 +578,27 @@ export default function EnergyECF() {
 
   const handleReportSubmit = async (data: Report) => {
     try {
-      const response = await fetch("/api/energy-review", {
-        method: editingReport ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "report",
-          data: data,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save report");
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingReport) {
+        // Update existing report
+        const updatedReport = {
+          ...data,
+          id: editingReport.id,
+        };
+        setReports((prev) =>
+          prev.map((report) =>
+            report.id === editingReport.id ? updatedReport : report
+          )
+        );
+      } else {
+        // Create new report with a temporary ID
+        const newReport = {
+          ...data,
+          id: `temp_${Date.now()}`,
+        };
+        setReports((prev) => [...prev, newReport]);
       }
-
-      const refreshResponse = await fetch("/api/energy-review");
-      const refreshData = await refreshResponse.json();
-      setReports(refreshData.reports);
 
       setReportDialogOpen(false);
       setEditingReport(undefined);
@@ -620,16 +609,17 @@ export default function EnergyECF() {
 
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
-      await fetch(
-        `/api/energy-review?title=${encodeURIComponent(report.title)}`,
-        {
-          method: "DELETE",
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setReports((prev) => {
+        const newReports = prev.filter((item) => item.id !== report.id);
+        // Calculate if we need to adjust the current page
+        const totalPages = Math.max(1, Math.ceil(newReports.length / 4)); // 4 is itemsPerPage
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages);
         }
-      );
-
-      const response = await fetch("/api/energy-review");
-      const data = await response.json();
-      setReports(data.reports);
+        return newReports;
+      });
       setDeleteReportConfirm(null);
     } catch (error) {
       console.error("Failed to delete report:", error);

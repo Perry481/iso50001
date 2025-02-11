@@ -194,8 +194,17 @@ export default function ENPI() {
 
   const handleDeleteConfirmed = async (indicator: Indicator) => {
     try {
-      // TODO: Implement delete functionality when API is ready
-      console.log("Delete indicator:", indicator);
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setIndicators((prev) => {
+        const newIndicators = prev.filter((item) => item.id !== indicator.id);
+        // Calculate if we need to adjust the current page
+        const totalPages = Math.max(1, Math.ceil(newIndicators.length / 4)); // 4 is itemsPerPage
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages);
+        }
+        return newIndicators;
+      });
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete indicator:", error);
@@ -204,8 +213,55 @@ export default function ENPI() {
 
   const handleIndicatorSubmit = async (data: EnpiFormData) => {
     try {
-      // TODO: Implement create/update functionality when API is ready
-      console.log("Submit indicator data:", data);
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingIndicator) {
+        // Update existing indicator
+        setIndicators((prev) =>
+          prev.map((indicator) =>
+            indicator.id === editingIndicator.id
+              ? {
+                  ...indicator,
+                  name: data.title,
+                  baselineCode: data.baselineCode,
+                  energyType: data.energyType,
+                  unit: data.unit,
+                  startDate: data.startDate,
+                  frequency: data.frequency,
+                  dataType: data.dataType,
+                  data: indicator.data.map((item) => ({
+                    ...item,
+                    remark: data.remark ?? null,
+                  })),
+                }
+              : indicator
+          )
+        );
+      } else {
+        // Create new indicator with a temporary ID
+        const newIndicator: Indicator = {
+          id: `temp_${Date.now()}`,
+          name: data.title,
+          baselineCode: data.baselineCode,
+          energyType: data.energyType,
+          unit: data.unit,
+          startDate: data.startDate,
+          frequency: data.frequency,
+          dataType: data.dataType,
+          data: [
+            {
+              date: new Date().toISOString().split("T")[0],
+              actualValue: 0,
+              theoreticalValue: 0,
+              maxDeviation: 0,
+              deviation: 0,
+              remark: data.remark ?? null,
+            },
+          ],
+        };
+        setIndicators((prev) => [...prev, newIndicator]);
+      }
+
       setDialogOpen(false);
       setEditingIndicator(undefined);
     } catch (error) {
@@ -439,8 +495,45 @@ export default function ENPI() {
 
   const handleDataPointSubmit = async (data: Omit<DataPoint, "id">) => {
     try {
-      // TODO: Implement create/update functionality when API is ready
-      console.log("Submit data point:", data);
+      if (!currentIndicator) return;
+
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingDataPoint) {
+        // Update existing data point
+        setIndicators((prev) =>
+          prev.map((indicator) => {
+            if (indicator.id === currentIndicator.id) {
+              return {
+                ...indicator,
+                data: indicator.data.map((item) =>
+                  item.date === editingDataPoint.date
+                    ? {
+                        ...data,
+                        remark: data.remark || null,
+                      }
+                    : item
+                ),
+              };
+            }
+            return indicator;
+          })
+        );
+      } else {
+        // Create new data point
+        setIndicators((prev) =>
+          prev.map((indicator) => {
+            if (indicator.id === currentIndicator.id) {
+              return {
+                ...indicator,
+                data: [...indicator.data, data],
+              };
+            }
+            return indicator;
+          })
+        );
+      }
+
       setDetailDialogOpen(false);
       setEditingDataPoint(undefined);
     } catch (error) {
@@ -450,8 +543,23 @@ export default function ENPI() {
 
   const handleDeleteDataPointConfirmed = async (dataPoint: DataPoint) => {
     try {
-      // TODO: Implement delete functionality when API is ready
-      console.log("Delete data point:", dataPoint);
+      if (!currentIndicator) return;
+
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setIndicators((prev) =>
+        prev.map((indicator) => {
+          if (indicator.id === currentIndicator.id) {
+            return {
+              ...indicator,
+              data: indicator.data.filter(
+                (item) => item.date !== dataPoint.date
+              ),
+            };
+          }
+          return indicator;
+        })
+      );
       setDeleteDataPointConfirm(null);
     } catch (error) {
       console.error("Failed to delete data point:", error);

@@ -162,13 +162,27 @@ export default function SEU() {
 
   const handleReportSubmit = async (data: Report) => {
     try {
-      // Log the report data that would be saved
-      console.log("Report data that would be saved:", {
-        report: {
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingReport) {
+        // Update existing report
+        const updatedReport = {
           ...data,
-          mode: editingReport ? "edit" : "create",
-        },
-      });
+          id: editingReport.id,
+        };
+        setReports((prev) =>
+          prev.map((report) =>
+            report.id === editingReport.id ? updatedReport : report
+          )
+        );
+      } else {
+        // Create new report with a temporary ID
+        const newReport = {
+          ...data,
+          id: `temp_${Date.now()}`,
+        };
+        setReports((prev) => [...prev, newReport]);
+      }
 
       setReportDialogOpen(false);
       setEditingReport(undefined);
@@ -179,8 +193,17 @@ export default function SEU() {
 
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
-      // Log the report that would be deleted
-      console.log("Report that would be deleted:", report);
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
+      setReports((prev) => {
+        const newReports = prev.filter((item) => item.id !== report.id);
+        // Calculate if we need to adjust the current page
+        const totalPages = Math.max(1, Math.ceil(newReports.length / 4)); // 4 is itemsPerPage
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages);
+        }
+        return newReports;
+      });
       setDeleteReportConfirm(null);
     } catch (error) {
       console.error("Failed to delete report:", error);
@@ -282,81 +305,12 @@ export default function SEU() {
       text: "場域群組用電當量(kWh)",
       left: "center",
     },
-    tooltip: {
-      trigger: "axis",
-      formatter: function (
-        params: { name: string; marker: string; value: number }[]
-      ) {
-        const param = params[0];
-        return `<div style="font-weight: bold">${param.name}</div>${
-          param.marker
-        }${param.value.toLocaleString()}`;
+    legend: {
+      top: 25,
+      data: ["SEU設備", "一般設備"],
+      textStyle: {
+        fontSize: 12,
       },
-    },
-    grid: {
-      left: "5%",
-      right: "5%",
-      bottom: "10%",
-      top: "15%",
-      containLabel: true,
-    },
-    xAxis: {
-      type: "category",
-      data:
-        monthlyData.length > 0
-          ? Object.entries(monthlyData[0])
-              .filter(([key]) => key !== "date" && key !== "全部")
-              .map(([key]) => ({
-                key,
-                value: monthlyData.reduce((sum, month) => {
-                  const monthValue = month[key];
-                  return (
-                    sum + (typeof monthValue === "number" ? monthValue : 0)
-                  );
-                }, 0),
-              }))
-              .sort((a, b) => b.value - a.value)
-              .map(({ key }) => key)
-          : [],
-      axisLabel: {
-        interval: 0,
-        rotate: 30,
-      },
-    },
-    yAxis: {
-      type: "value",
-      axisLabel: {
-        formatter: (value: number) => value.toLocaleString(),
-      },
-    },
-    series: [
-      {
-        type: "bar",
-        data:
-          monthlyData.length > 0
-            ? Object.entries(monthlyData[0])
-                .filter(([key]) => key !== "date" && key !== "全部")
-                .map(([key]) => ({
-                  key,
-                  value: monthlyData.reduce((sum, month) => {
-                    const value = month[key];
-                    return sum + (typeof value === "number" ? value : 0);
-                  }, 0),
-                }))
-                .sort((a, b) => b.value - a.value)
-                .map(({ value }) => value)
-            : [],
-        itemStyle: {
-          color: "#6B7ED9",
-        },
-      },
-    ],
-  };
-
-  const paretoChartOption = {
-    title: {
-      text: "設備能耗帕累托圖",
-      left: "center",
     },
     tooltip: {
       trigger: "axis",
@@ -364,15 +318,26 @@ export default function SEU() {
         type: "shadow",
       },
       formatter: function (
-        params: { name: string; marker: string; value: number }[]
+        params: {
+          name: string;
+          marker: string;
+          value: number;
+          seriesName: string;
+        }[]
       ) {
-        const barData = params[0];
-        const lineData = params[1];
-        return `<div style="font-weight: bold">${barData.name}</div>${
-          barData.marker
-        }${barData.value.toFixed(2)} kW<br/>${
-          lineData.marker
-        }${lineData.value.toFixed(2)}%`;
+        const seuValue =
+          params.find((param) => param.seriesName === "SEU設備")?.value || 0;
+        const nonSeuValue =
+          params.find((param) => param.seriesName === "一般設備")?.value || 0;
+        const totalValue = seuValue + nonSeuValue;
+        const isSeu = seuValue > 0;
+        const barColor = isSeu ? "#91CC75" : "#6B7ED9";
+
+        let result = `<div style="font-weight: bold">${params[0].name} (${
+          isSeu ? "已" : "未"
+        }列入SEU)</div>`;
+        result += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${barColor};"></span>用電當量(kWh): ${totalValue.toLocaleString()} kW`;
+        return result;
       },
     },
     grid: {
@@ -400,6 +365,114 @@ export default function SEU() {
     ],
     xAxis: {
       type: "category",
+      data: seuGroupData.map((item) => item.groupName),
+      axisLabel: {
+        interval: 0,
+        rotate: 30,
+      },
+    },
+    yAxis: {
+      type: "value",
+      name: "能耗 (kW)",
+      axisLabel: {
+        formatter: (value: number) => value.toLocaleString(),
+      },
+    },
+    series: [
+      {
+        name: "SEU設備",
+        type: "bar",
+        data: seuGroupData.map((item) => (item.IsSEU ? item.KW : 0)),
+        itemStyle: {
+          color: "#91CC75",
+        },
+        stack: "total",
+      },
+      {
+        name: "一般設備",
+        type: "bar",
+        data: seuGroupData.map((item) => (!item.IsSEU ? item.KW : 0)),
+        itemStyle: {
+          color: "#6B7ED9",
+        },
+        stack: "total",
+      },
+    ],
+  };
+
+  const paretoChartOption = {
+    title: {
+      text: "設備能耗帕累托圖",
+      left: "center",
+    },
+    legend: {
+      top: 25,
+      data: ["SEU設備", "一般設備", "累計百分比"],
+      textStyle: {
+        fontSize: 12,
+      },
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: {
+        type: "shadow",
+      },
+      formatter: function (
+        params: {
+          name: string;
+          marker: string;
+          value: number;
+          seriesName: string;
+          color: string;
+        }[]
+      ) {
+        const lineData = params.find(
+          (param) => param.seriesName === "累計百分比"
+        );
+        const seuValue =
+          params.find((param) => param.seriesName === "SEU設備")?.value || 0;
+        const nonSeuValue =
+          params.find((param) => param.seriesName === "一般設備")?.value || 0;
+        const totalValue = seuValue + nonSeuValue;
+        const isSeu = seuValue > 0;
+        const barColor = isSeu ? "#91CC75" : "#6B7ED9";
+
+        let result = `<div style="font-weight: bold">${params[0].name} (${
+          isSeu ? "已" : "未"
+        }列入SEU)</div>`;
+        result += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${barColor};"></span>用電當量(kWh): ${totalValue.toLocaleString()} kW`;
+        if (lineData) {
+          result += `<br/>${
+            lineData.marker
+          }累計百分比: ${lineData.value.toFixed(2)}%`;
+        }
+        return result;
+      },
+    },
+    grid: {
+      left: "5%",
+      right: "5%",
+      bottom: "15%",
+      top: "15%",
+      containLabel: true,
+    },
+    dataZoom: [
+      {
+        type: "slider",
+        show: true,
+        xAxisIndex: [0],
+        start: 0,
+        end: 50,
+      },
+      {
+        type: "inside",
+        xAxisIndex: [0],
+        start: 0,
+        end: 50,
+      },
+    ],
+    xAxis: {
+      type: "category",
       data: seuEquipmentData.map((item) => item.EquipmentName),
       axisLabel: {
         interval: "auto",
@@ -423,15 +496,21 @@ export default function SEU() {
     ],
     series: [
       {
-        name: "能耗",
+        name: "SEU設備",
         type: "bar",
-        data: seuEquipmentData.map((item) => item.KW),
+        stack: "total",
+        data: seuEquipmentData.map((item) => (item.IsSEU ? item.KW : 0)),
         itemStyle: {
-          color: function (params: { dataIndex: number }) {
-            return seuEquipmentData[params.dataIndex].IsSEU
-              ? "#91CC75"
-              : "#6B7ED9";
-          },
+          color: "#91CC75",
+        },
+      },
+      {
+        name: "一般設備",
+        type: "bar",
+        stack: "total",
+        data: seuEquipmentData.map((item) => (!item.IsSEU ? item.KW : 0)),
+        itemStyle: {
+          color: "#6B7ED9",
         },
       },
       {
@@ -451,6 +530,28 @@ export default function SEU() {
           });
         })(),
         symbolSize: 8,
+        lineStyle: {
+          color: "#FFD700",
+        },
+        itemStyle: {
+          color: "#FFD700",
+        },
+        markLine: {
+          silent: true,
+          lineStyle: {
+            color: "#E88080",
+            type: "dashed",
+            width: 2,
+          },
+          data: [
+            {
+              yAxis: 80,
+              label: {
+                show: false,
+              },
+            },
+          ],
+        },
       },
     ],
   };

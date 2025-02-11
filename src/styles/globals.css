@@ -438,6 +438,7 @@ body.sidebar-mini {
   position: relative;
   display: flex;
   flex-direction: column;
+  padding-bottom: 5vh !important;
 }
 
 /* Main content area */

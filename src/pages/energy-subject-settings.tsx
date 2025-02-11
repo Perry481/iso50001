@@ -3,6 +3,14 @@ import { type MRT_ColumnDef } from "material-react-table";
 import { DataGrid } from "@/components/DataGrid";
 import { DetailDialog, type Field } from "@/components/dialogs/DetailDialog";
 import Tooltip from "@mui/material/Tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface EnergySubject {
   id?: string | number;
@@ -74,6 +82,9 @@ export default function EnergySubjectSettings() {
   const [data, setData] = useState<EnergySubject[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<EnergySubject | undefined>();
+  const [deleteConfirm, setDeleteConfirm] = useState<EnergySubject | null>(
+    null
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -141,47 +152,51 @@ export default function EnergySubjectSettings() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (row: EnergySubject) => {
-    if (!confirm("確定要刪除此項目嗎？")) return;
+  const handleDelete = (row: EnergySubject) => {
+    setDeleteConfirm(row);
+  };
 
+  const handleDeleteConfirmed = async (item: EnergySubject) => {
     try {
-      const response = await fetch(
-        `/api/energy-subject-settings?id=${row.EnergyGroupID}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to delete item");
-
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
       setData((prev) =>
-        prev.filter((item) => item.EnergyGroupID !== row.EnergyGroupID)
+        prev.filter((i) => i.EnergyGroupID !== item.EnergyGroupID)
       );
+      setDeleteConfirm(null);
     } catch (error) {
-      console.error("Error deleting item:", error);
+      console.error("Failed to delete item:", error);
     }
   };
 
   const handleSubmit = async (formData: Omit<EnergySubject, "id">) => {
     try {
-      const response = await fetch("/api/energy-subject-settings", {
-        method: editingItem ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) throw new Error("Failed to save item");
-
-      const result = await response.json();
-
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
       if (editingItem) {
+        // Update existing item
+        const updatedItem = {
+          ...formData,
+          id: editingItem.id,
+          CreatedTime: editingItem.CreatedTime,
+          UpdatedTime: new Date().toISOString(),
+        };
         setData((prev) =>
           prev.map((item) =>
-            item.EnergyGroupID === editingItem.EnergyGroupID ? result : item
+            item.EnergyGroupID === editingItem.EnergyGroupID
+              ? updatedItem
+              : item
           )
         );
       } else {
-        setData((prev) => [...prev, result]);
+        // Create new item with a temporary ID
+        const newItem = {
+          ...formData,
+          id: `temp_${Date.now()}`,
+          CreatedTime: new Date().toISOString(),
+          UpdatedTime: new Date().toISOString(),
+        };
+        setData((prev) => [...prev, newItem]);
       }
 
       setDialogOpen(false);
@@ -212,6 +227,36 @@ export default function EnergySubjectSettings() {
         description="共用設備群組"
         fields={fields}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deleteConfirm}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除群組</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600 text-center">
+            您確定要刪除群組 &ldquo;{deleteConfirm?.EnergyGroupName}&rdquo; 嗎？
+            <br />
+            此操作無法復原。
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteConfirm && handleDeleteConfirmed(deleteConfirm)
+              }
+            >
+              刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

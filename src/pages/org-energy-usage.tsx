@@ -287,16 +287,22 @@ export default function OrgEnergyUsage() {
   const handleAdd = () => {
     // Find default ECF (e.g., first in the list)
     const defaultEcf = ecfs[0];
-    setEditingRecord({
+    const today = new Date().toISOString().split("T")[0];
+
+    // For new records, we set initial values but don't set an ID
+    const initialData = {
       name: "",
       categoryCode: defaultEcf?.code || "",
       categoryName: defaultEcf?.name || "",
-      startDate: "",
-      endDate: "",
+      startDate: today,
+      endDate: today,
       usage: 0,
       unit: defaultEcf?.unit || "",
       meterNumber: "",
-    });
+      note: "",
+    };
+
+    setEditingRecord(initialData);
     setDialogOpen(true);
   };
 
@@ -319,29 +325,26 @@ export default function OrgEnergyUsage() {
     };
 
     try {
-      const response = await fetch("/api/org-energy-usage", {
-        method: editingRecord ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // TODO: Implement actual API call for create/update
+      // For now, mock the API response with local state updates
+      if (editingRecord && "id" in editingRecord) {
+        // Update existing record
+        const updatedRecord = {
           ...submissionData,
-          id: editingRecord?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save record");
-      }
-
-      const result = await response.json();
-
-      if (editingRecord) {
+          id: editingRecord.id,
+        };
         setRecords((prev) =>
           prev.map((record) =>
-            record.id === editingRecord.id ? result.record : record
+            record.id === editingRecord.id ? updatedRecord : record
           )
         );
       } else {
-        setRecords((prev) => [...prev, result.record]);
+        // Create new record with a temporary ID
+        const newRecord = {
+          ...submissionData,
+          id: `temp_${Date.now()}`,
+        };
+        setRecords((prev) => [...prev, newRecord]);
       }
 
       setDialogOpen(false);
@@ -353,14 +356,8 @@ export default function OrgEnergyUsage() {
 
   const handleDeleteConfirmed = async (record: EnergyUsage) => {
     try {
-      const response = await fetch(`/api/org-energy-usage/${record.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete record");
-      }
-
+      // TODO: Implement actual API call for deletion
+      // For now, just update the UI state
       setRecords((prev) => prev.filter((r) => r.id !== record.id));
       setDeleteConfirm(null);
     } catch (error) {

@@ -87,7 +87,7 @@ export function BaselineListing({
     loadData();
   }, []);
 
-  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentItems = items.slice(startIndex, endIndex);
@@ -102,33 +102,31 @@ export function BaselineListing({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-medium">{title}</h2>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="hover:!outline hover:!outline-1 hover:!outline-blue-500"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-gray-600">
-              第 {currentPage} 頁，共 {totalPages} 頁
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                onPageChange(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="hover:!outline hover:!outline-1 hover:!outline-blue-500"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            className={`hover:!outline hover:!outline-1 hover:!outline-blue-500 ${
+              currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-gray-600">
+            第 {currentPage} 頁，共 {totalPages} 頁
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            className={`hover:!outline hover:!outline-1 hover:!outline-blue-500 ${
+              currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
         <Button
           className="bg-green-500 hover:bg-green-600 text-white"
           onClick={onAddItem}
@@ -141,10 +139,15 @@ export function BaselineListing({
         {currentItems.map((item) => (
           <div
             key={item.id || item.baselineCode}
-            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:border-gray-300 transition-colors cursor-pointer"
+            className="relative bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 hover:outline hover:outline-1 hover:outline-blue-500 cursor-pointer group"
             onClick={() => handleItemClick(item)}
           >
-            <div className="p-6">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              <p className="text-gray-300 text-sm bg-white/90 px-3 py-1 rounded-full">
+                點擊查看詳細資訊
+              </p>
+            </div>
+            <div className="p-6 relative">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
@@ -152,7 +155,7 @@ export function BaselineListing({
                       {item.baselineCode}
                     </h3>
                     <div
-                      className="flex gap-2"
+                      className="flex gap-2 relative z-10"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Button
