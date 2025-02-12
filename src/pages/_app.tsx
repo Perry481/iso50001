@@ -3,10 +3,11 @@ import type { AppProps } from "next/app";
 import Head from "next/head";
 import Layout from "@/components/Layout";
 import "@/styles/globals.css";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <>
+    <CompanyProvider>
       <Head>
         <title>Iso50001能耗管理</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -15,6 +16,6 @@ export default function App({ Component, pageProps }: AppProps) {
       <Layout>
         <Component {...pageProps} />
       </Layout>
-    </>
+    </CompanyProvider>
   );
 }

@@ -101,7 +101,6 @@ const Sidebar = () => {
         <Link href="/" className="brand-link">
           <span className="brand-text font-weight-light">Iso50001能耗管理</span>
         </Link>
-
         {/* Sidebar */}
         <div className="sidebar">
           {/* Sidebar user panel */}
