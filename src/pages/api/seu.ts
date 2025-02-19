@@ -26,6 +26,7 @@ interface SEUStateData {
   percentage: number;
   IsSEU: boolean;
   status?: string;
+  EceSgt: number;
 }
 
 interface SEUGroupData {
@@ -34,6 +35,7 @@ interface SEUGroupData {
   percentage: number;
   IsSEU: boolean;
   status?: string;
+  groupId?: string;
 }
 
 interface ApiResponse {
@@ -78,10 +80,15 @@ interface ApiGroupResponse {
   }[];
 }
 
-interface ApiWorkMonthResponse {
-  Qty: number[][];
+interface AreaStaticResponse {
+  Qty: number[];
   Category: string[];
+}
+
+interface ApiWorkMonthResponse {
   Title: string[];
+  Category: string[];
+  Qty: number[][];
 }
 
 function transformDate(dateString: string): string {
@@ -91,10 +98,10 @@ function transformDate(dateString: string): string {
   return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
 }
 
-async function fetchReports(): Promise<Report[]> {
+async function fetchReports(company: string): Promise<Report[]> {
   try {
     const response = await fetch(
-      "http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=estimatereport"
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=estimatereport&schema=${company}`
     );
     const data: ApiReportResponse[] = await response.json();
 
@@ -111,10 +118,13 @@ async function fetchReports(): Promise<Report[]> {
   }
 }
 
-async function fetchEnergyConsumption(eeSgt: number): Promise<EnergyData[]> {
+async function fetchEnergyConsumption(
+  company: string,
+  eeSgt: number
+): Promise<EnergyData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=kw&eesgt=${eeSgt}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=kw&eesgt=${eeSgt}&schema=${company}`
     );
     const data: EnergyData[] = await response.json();
     return data;
@@ -124,10 +134,13 @@ async function fetchEnergyConsumption(eeSgt: number): Promise<EnergyData[]> {
   }
 }
 
-async function fetchEnergyEmission(eeSgt: number): Promise<EnergyData[]> {
+async function fetchEnergyEmission(
+  company: string,
+  eeSgt: number
+): Promise<EnergyData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=co2&eesgt=${eeSgt}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=co2&eesgt=${eeSgt}&schema=${company}`
     );
     const data: EnergyData[] = await response.json();
     return data;
@@ -138,11 +151,12 @@ async function fetchEnergyEmission(eeSgt: number): Promise<EnergyData[]> {
 }
 
 async function fetchSEUEquipmentData(
+  company: string,
   eeSgt: number
 ): Promise<SEUEquipmentData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiSEUEquipmentResponse = await response.json();
     return data.SEUList.map((item) => ({
@@ -158,10 +172,13 @@ async function fetchSEUEquipmentData(
   }
 }
 
-async function fetchSEUStateData(eeSgt: number): Promise<SEUStateData[]> {
+async function fetchSEUStateData(
+  company: string,
+  eeSgt: number
+): Promise<SEUStateData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiSEUEquipmentResponse = await response.json();
     return data.SEUList.map((item) => ({
@@ -170,6 +187,7 @@ async function fetchSEUStateData(eeSgt: number): Promise<SEUStateData[]> {
       percentage: item.Percentage,
       IsSEU: item.IsSEU,
       status: item.IsSEU ? undefined : "取消",
+      EceSgt: item.EceSgt,
     }));
   } catch (error) {
     console.error("Failed to fetch SEU state data:", error);
@@ -177,10 +195,13 @@ async function fetchSEUStateData(eeSgt: number): Promise<SEUStateData[]> {
   }
 }
 
-async function fetchSEUGroupData(eeSgt: number): Promise<SEUGroupData[]> {
+async function fetchSEUGroupData(
+  company: string,
+  eeSgt: number
+): Promise<SEUGroupData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=groupstatic&eesgt=${eeSgt}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=groupstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiGroupResponse = await response.json();
     return data.SEUList.filter((item) => item.EnergyGroupName) // Filter out null group names
@@ -190,6 +211,7 @@ async function fetchSEUGroupData(eeSgt: number): Promise<SEUGroupData[]> {
         percentage: item.Percentage,
         IsSEU: item.HasSEU ?? false,
         status: item.HasSEU ? undefined : "取消",
+        groupId: item.EnergyGroupID || undefined,
       }));
   } catch (error) {
     console.error("Failed to fetch SEU group data:", error);
@@ -198,6 +220,7 @@ async function fetchSEUGroupData(eeSgt: number): Promise<SEUGroupData[]> {
 }
 
 async function fetchWorkMonthData(
+  company: string,
   eeSgt: number,
   categoryType: string = "C"
 ): Promise<{
@@ -205,38 +228,44 @@ async function fetchWorkMonthData(
   monthlyData: MonthlyData[];
 }> {
   try {
-    const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyEstimateDetail.ashx?selecttype=workmonthstatic&eesgt=${eeSgt}&categorytype=${categoryType}`
+    // Fetch area static data
+    const areaResponse = await fetch(
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=areastatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
     );
-    const data: ApiWorkMonthResponse = await response.json();
+    const areaData: AreaStaticResponse = await areaResponse.json();
 
-    // Transform to equipment consumption format
-    const equipmentConsumption: EnergyData[] = data.Title.slice(1).map(
+    // Fetch monthly data
+    const monthlyResponse = await fetch(
+      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=workmonthstatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
+    );
+    const monthlyData: ApiWorkMonthResponse = await monthlyResponse.json();
+
+    // Transform area data
+    const equipmentConsumption: EnergyData[] = areaData.Category.map(
       (name, index) => ({
         EnergyTypeID: (index + 1).toString(),
         name,
-        value: data.Qty[index + 1].reduce((sum, val) => sum + (val || 0), 0),
+        value: areaData.Qty[index],
       })
     );
 
-    // Transform to monthly data format
-    const monthlyData: MonthlyData[] = data.Category.map(
-      (date, categoryIndex) => {
-        const result: MonthlyData = { date };
-
-        // For each title, get its corresponding Qty array and take the value at categoryIndex
-        data.Title.forEach((title, titleIndex) => {
-          const titleQtyArray = data.Qty[titleIndex];
-          result[title] = titleQtyArray ? titleQtyArray[categoryIndex] || 0 : 0;
+    // Transform monthly data
+    const transformedMonthlyData: MonthlyData[] = monthlyData.Title.map(
+      (_, monthIndex) => {
+        const monthData: MonthlyData = {
+          date: monthlyData.Title[monthIndex],
+        };
+        monthlyData.Category.forEach((category, categoryIndex) => {
+          monthData[category] = monthlyData.Qty[categoryIndex][monthIndex];
         });
-
-        return result;
+        return monthData;
       }
     );
 
-    console.log("Monthly Data:", monthlyData); // Debug log
-
-    return { equipmentConsumption, monthlyData };
+    return {
+      equipmentConsumption,
+      monthlyData: transformedMonthlyData,
+    };
   } catch (error) {
     console.error("Failed to fetch work month data:", error);
     return {
@@ -251,6 +280,11 @@ export default function handler(
   res: NextApiResponse<ApiResponse>
 ) {
   const { method, query } = req;
+  const { company } = query;
+
+  if (!company || typeof company !== "string") {
+    return res.status(400).json({ message: "Company is required" });
+  }
 
   switch (method) {
     case "GET":
@@ -264,12 +298,12 @@ export default function handler(
 
         // Fetch all data in parallel
         return Promise.all([
-          fetchEnergyConsumption(eeSgt),
-          fetchEnergyEmission(eeSgt),
-          fetchSEUEquipmentData(eeSgt),
-          fetchSEUStateData(eeSgt),
-          fetchSEUGroupData(eeSgt),
-          fetchWorkMonthData(eeSgt, categoryType),
+          fetchEnergyConsumption(company, eeSgt),
+          fetchEnergyEmission(company, eeSgt),
+          fetchSEUEquipmentData(company, eeSgt),
+          fetchSEUStateData(company, eeSgt),
+          fetchSEUGroupData(company, eeSgt),
+          fetchWorkMonthData(company, eeSgt, categoryType),
         ]).then(
           ([
             energyConsumption,
@@ -291,7 +325,7 @@ export default function handler(
         );
       }
       // Get reports list
-      return fetchReports().then((reports) =>
+      return fetchReports(company).then((reports) =>
         res.status(200).json({ reports })
       );
 

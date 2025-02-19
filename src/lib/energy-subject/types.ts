@@ -1,14 +1,21 @@
 export interface EnergySubject {
-  EnergyGroupID: string;
-  EnergyGroupName: string;
-  Remark: string;
-  CreatedTime: string | null;
-  UpdatedTime: string | null;
+  id?: string | number;
+  code: string;
+  name: string;
+  note?: string;
 }
 
 export interface RawApiResponse {
-  total: number;
   page: number;
+  total: number;
   records: number;
-  rows: EnergySubject[];
+  rows: RawSubjectData[];
+}
+
+export interface RawSubjectData {
+  EnergyGroupID: string;
+  EnergyGroupName: string;
+  Remark: string | null;
+  CreatedTime: string | null;
+  UpdatedTime: string | null;
 }

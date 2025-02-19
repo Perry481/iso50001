@@ -3,6 +3,9 @@ import { type MRT_ColumnDef } from "material-react-table";
 import { DataGrid } from "@/components/DataGrid";
 import { DetailDialog, type Field } from "@/components/dialogs/DetailDialog";
 import Tooltip from "@mui/material/Tooltip";
+import { getSubjects } from "@/lib/energy-subject/service";
+import { useCompany } from "@/contexts/CompanyContext";
+import type { EnergySubject } from "@/lib/energy-subject/types";
 import {
   Dialog,
   DialogContent,
@@ -11,15 +14,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-interface EnergySubject {
-  id?: string | number;
-  EnergyGroupID: string;
-  EnergyGroupName: string;
-  Remark: string;
-  CreatedTime: string | null;
-  UpdatedTime: string | null;
-}
 
 const tooltipProps = {
   arrow: true,
@@ -58,52 +52,57 @@ const tooltipProps = {
   },
 };
 
-const fields: Field[] = [
-  {
-    key: "EnergyGroupID",
-    label: "群組編號",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "EnergyGroupName",
-    label: "群組名稱",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "Remark",
-    label: "備註",
-    type: "text",
-  },
-];
-
 export default function EnergySubjectSettings() {
-  const [data, setData] = useState<EnergySubject[]>([]);
+  const [subjects, setSubjects] = useState<EnergySubject[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<EnergySubject | undefined>();
+  const [editingSubject, setEditingSubject] = useState<
+    EnergySubject | undefined
+  >();
   const [deleteConfirm, setDeleteConfirm] = useState<EnergySubject | null>(
     null
   );
+  const { companyName, isSchemaInitialized } = useCompany();
+
+  const fields: Field[] = [
+    {
+      key: "code",
+      label: "群組編號",
+      type: "text",
+      required: true,
+      disabled: Boolean(editingSubject?.id),
+    },
+    {
+      key: "name",
+      label: "群組名稱",
+      type: "text",
+      required: true,
+    },
+    {
+      key: "note",
+      label: "備註",
+      type: "text",
+    },
+  ];
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const response = await fetch("/api/energy-subject-settings");
-        const result = await response.json();
-        setData(result);
+        const data = await getSubjects(companyName);
+        setSubjects(data);
       } catch (error) {
         console.error("Failed to load data:", error);
       }
     };
 
     loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   const columns = useMemo<MRT_ColumnDef<EnergySubject>[]>(
     () => [
       {
-        accessorKey: "EnergyGroupID",
+        accessorKey: "code",
         header: "群組編號",
         size: 110,
         Header: () => (
@@ -115,7 +114,7 @@ export default function EnergySubjectSettings() {
         ),
       },
       {
-        accessorKey: "EnergyGroupName",
+        accessorKey: "name",
         header: "群組名稱",
         size: 140,
         Header: () => (
@@ -127,7 +126,7 @@ export default function EnergySubjectSettings() {
         ),
       },
       {
-        accessorKey: "Remark",
+        accessorKey: "note",
         header: "備註",
         size: 150,
         Header: () => (
@@ -143,12 +142,15 @@ export default function EnergySubjectSettings() {
   );
 
   const handleAdd = () => {
-    setEditingItem(undefined);
+    setEditingSubject(undefined);
     setDialogOpen(true);
   };
 
   const handleEdit = (row: EnergySubject) => {
-    setEditingItem(row);
+    setEditingSubject({
+      ...row,
+      id: row.code,
+    });
     setDialogOpen(true);
   };
 
@@ -156,53 +158,60 @@ export default function EnergySubjectSettings() {
     setDeleteConfirm(row);
   };
 
-  const handleDeleteConfirmed = async (item: EnergySubject) => {
+  const handleSubmit = async (data: Omit<EnergySubject, "id">) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setData((prev) =>
-        prev.filter((i) => i.EnergyGroupID !== item.EnergyGroupID)
+      const isEditing = Boolean(editingSubject?.id);
+      const requestBody = isEditing
+        ? {
+            ...data,
+            id: editingSubject!.id,
+          }
+        : data;
+
+      const response = await fetch(
+        `/api/energy-subject-settings?company=${companyName}`,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
       );
-      setDeleteConfirm(null);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to save subject");
+      }
+
+      setSubjects(result.subjects);
+      setDialogOpen(false);
+      setEditingSubject(undefined);
     } catch (error) {
-      console.error("Failed to delete item:", error);
+      console.error("Failed to save subject:", error);
     }
   };
 
-  const handleSubmit = async (formData: Omit<EnergySubject, "id">) => {
+  const handleDeleteConfirmed = async (subject: EnergySubject) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
-      if (editingItem) {
-        // Update existing item
-        const updatedItem = {
-          ...formData,
-          id: editingItem.id,
-          CreatedTime: editingItem.CreatedTime,
-          UpdatedTime: new Date().toISOString(),
-        };
-        setData((prev) =>
-          prev.map((item) =>
-            item.EnergyGroupID === editingItem.EnergyGroupID
-              ? updatedItem
-              : item
-          )
-        );
-      } else {
-        // Create new item with a temporary ID
-        const newItem = {
-          ...formData,
-          id: `temp_${Date.now()}`,
-          CreatedTime: new Date().toISOString(),
-          UpdatedTime: new Date().toISOString(),
-        };
-        setData((prev) => [...prev, newItem]);
+      const response = await fetch(
+        `/api/energy-subject-settings?company=${companyName}&id=${subject.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete subject");
       }
 
-      setDialogOpen(false);
-      setEditingItem(undefined);
+      setSubjects(result.subjects);
+      setDeleteConfirm(null);
     } catch (error) {
-      console.error("Error saving item:", error);
+      console.error("Failed to delete subject:", error);
     }
   };
 
@@ -210,7 +219,7 @@ export default function EnergySubjectSettings() {
     <div className="p-2 space-y-2">
       <DataGrid
         title="共用設備群組管理"
-        data={data}
+        data={subjects}
         columns={columns}
         onAdd={handleAdd}
         onEdit={handleEdit}
@@ -221,14 +230,13 @@ export default function EnergySubjectSettings() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
-        initialData={editingItem}
-        mode={editingItem ? "edit" : "create"}
+        initialData={editingSubject}
+        mode={editingSubject ? "edit" : "create"}
         title="共用設備群組"
         description="共用設備群組"
         fields={fields}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
@@ -238,7 +246,7 @@ export default function EnergySubjectSettings() {
             <DialogTitle>確認刪除群組</DialogTitle>
           </DialogHeader>
           <p className="text-gray-600 text-center">
-            您確定要刪除群組 &ldquo;{deleteConfirm?.EnergyGroupName}&rdquo; 嗎？
+            您確定要刪除群組 &ldquo;{deleteConfirm?.name}&rdquo; 嗎？
             <br />
             此操作無法復原。
           </p>

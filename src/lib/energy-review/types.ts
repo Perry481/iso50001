@@ -31,4 +31,6 @@ export interface Detail {
     | "初評具潛力"
     | "不確定"
     | "良好";
+  equipmentCode?: string;
+  eceSgt?: number;
 }

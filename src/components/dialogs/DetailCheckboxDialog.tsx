@@ -18,8 +18,9 @@ import {
 } from "../ui/select";
 import type { Field } from "./DetailDialog";
 import type { Equipment } from "@/lib/energy-equipment/types";
-import { energyEquipmentService } from "@/lib/energy-equipment/service";
+import { getEquipments } from "@/lib/energy-equipment/service";
 import { Loader2 } from "lucide-react";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface DetailCheckboxDialogProps<T extends { id?: string | number }> {
   open: boolean;
@@ -47,6 +48,7 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
   description,
   fields,
 }: DetailCheckboxDialogProps<T>) {
+  const { companyName } = useCompany();
   const [formData, setFormData] = useState<FormDataType>({});
   const [error, setError] = useState<string | null>(null);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -68,9 +70,9 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
   const loadEquipments = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await energyEquipmentService.getEquipments();
+      const data = await getEquipments(companyName);
       const filteredEquipments = data.filter(
-        (eq) => eq.equipmentType === selectedType
+        (eq: Equipment) => eq.equipmentType === selectedType
       );
       setEquipments(filteredEquipments);
     } catch (error) {
@@ -79,7 +81,7 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
     } finally {
       setLoading(false);
     }
-  }, [selectedType]);
+  }, [selectedType, companyName]);
 
   useEffect(() => {
     if (open) {
@@ -117,7 +119,7 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
         [field.key]: value,
       };
 
-      // Calculate actualConsumption when totalHours or kwPerHour changes
+      // Calculate actualConsumption and actualEnergy when totalHours or kwPerHour changes
       if (field.key === "totalHours" || field.key === "kwPerHour") {
         const hours =
           field.key === "totalHours"
@@ -128,6 +130,7 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
             ? Number(value)
             : Number(prev.kwPerHour || 0);
         updates.actualConsumption = calculateActualConsumption(hours, kw);
+        updates.actualEnergy = calculateActualConsumption(hours, kw); // Set actualEnergy to the same value
       }
 
       return updates;
@@ -166,8 +169,8 @@ export function DetailCheckboxDialog<T extends { id?: string | number }>({
             ...prev,
             name: equipment.name,
             type: equipment.equipmentType,
-            group: equipment.usageGroup,
-            area: equipment.workArea,
+            group: equipment.usageGroupName,
+            area: equipment.workAreaName,
             kwPerHour: equipment.ratedPower || 0,
             quantity: equipment.quantity,
             loadFactor: 1,

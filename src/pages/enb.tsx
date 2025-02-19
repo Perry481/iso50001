@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ReactECharts from "echarts-for-react";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface ENBData {
   baselineCode: string;
@@ -36,6 +37,11 @@ interface ENBData {
   X3?: string;
   X4?: string;
   X5?: string;
+  X1Unit?: string;
+  X2Unit?: string;
+  X3Unit?: string;
+  X4Unit?: string;
+  X5Unit?: string;
   ebSgt: number;
 }
 
@@ -112,6 +118,11 @@ interface ENBFormData {
   X3?: string;
   X4?: string;
   X5?: string;
+  X1Unit?: string;
+  X2Unit?: string;
+  X3Unit?: string;
+  X4Unit?: string;
+  X5Unit?: string;
   ebSgt?: number;
 }
 
@@ -220,6 +231,7 @@ export default function ENB() {
     BaselineData | undefined
   >();
   const [selectedX, setSelectedX] = useState<string>("X1");
+  const { companyName, isSchemaInitialized } = useCompany();
 
   const columns = useMemo<MRT_ColumnDef<BaselineData>[]>(() => {
     const baseColumns = [
@@ -234,6 +246,10 @@ export default function ENB() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ cell }: { cell: MRT_Cell<BaselineData> }) => {
+          const value = cell.getValue<string>();
+          return value || "-";
+        },
       },
       {
         accessorKey: "value",
@@ -292,19 +308,20 @@ export default function ENB() {
   }, [selectedBaseline]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const response = await fetch("/api/enb");
-        const result = await response.json();
-        setItems(result.data);
-        setBaselineDetails(result.baselineDetails);
+        const response = await fetch(`/api/enb?company=${companyName}`);
+        const data = await response.json();
+        setItems(data.data || []);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Failed to load data:", error);
       }
     };
 
-    fetchData();
-  }, []);
+    loadData();
+  }, [companyName, isSchemaInitialized]);
 
   useEffect(() => {
     const fetchRegressionData = async () => {
@@ -312,7 +329,7 @@ export default function ENB() {
 
       try {
         const response = await fetch(
-          `/api/enb?ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch regression data");
@@ -343,7 +360,7 @@ export default function ENB() {
     if (selectedBaseline && selectedX) {
       fetchRegressionData();
     }
-  }, [selectedX, selectedBaseline]);
+  }, [selectedX, selectedBaseline, companyName]);
 
   const handleAddItem = () => {
     setDialogState({
@@ -366,60 +383,97 @@ export default function ENB() {
 
   const handleDeleteConfirmed = async (item: ENBData) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setItems((prev) => {
-        const newItems = prev.filter(
-          (i) => i.baselineCode !== item.baselineCode
-        );
-        // Calculate if we need to adjust the current page
-        const totalPages = Math.max(1, Math.ceil(newItems.length / 4)); // 4 is itemsPerPage
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages);
+      const response = await fetch(
+        `/api/enb?company=${companyName}&ebSgt=${item.ebSgt}`,
+        {
+          method: "DELETE",
         }
-        return newItems;
-      });
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "刪除基線時發生錯誤");
+      }
+
+      const updatedData = await response.json();
+      setItems(updatedData);
+
+      // Calculate if we need to adjust the current page
+      const totalPages = Math.max(1, Math.ceil(updatedData.length / 4)); // 4 is itemsPerPage
+      if (currentPage > totalPages) {
+        setCurrentPage(totalPages);
+      }
+
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete baseline:", error);
+      let errorMessage = "刪除基線時發生錯誤";
+
+      if (error instanceof Error) {
+        if (error.message.includes("EBSGT_REQUIRED")) {
+          errorMessage = "基線ID不存在";
+        } else if (error.message.includes("Company is required")) {
+          errorMessage = "未指定公司";
+        } else if (error.message.includes("Failed to delete baseline")) {
+          errorMessage = "刪除基線失敗，請稍後再試";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      alert(errorMessage);
     }
   };
 
   const handleSubmit = async (formData: ENBFormData) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
-      const enbData: ENBData = {
-        baselineCode: formData.baselineCode,
-        targetItem: formData.targetItem,
-        energyType: formData.energyType,
-        workArea: formData.workArea,
-        sharedGroup: formData.sharedGroup,
-        locked: formData.locked,
-        note: formData.note,
-        X1: formData.X1,
-        X2: formData.X2,
-        X3: formData.X3,
-        X4: formData.X4,
-        X5: formData.X5,
-        ebSgt: formData.ebSgt || 0,
-      };
+      const response = await fetch(`/api/enb?company=${companyName}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          ebSgt: formData.ebSgt,
+        }),
+      });
 
-      if (dialogState.mode === "create") {
-        // Create new item
-        setItems((prev) => [...prev, enbData]);
-      } else {
-        // Update existing item
-        setItems((prev) =>
-          prev.map((item) =>
-            item.baselineCode === enbData.baselineCode ? enbData : item
-          )
-        );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "儲存基線時發生錯誤");
       }
 
+      const updatedData = await response.json();
+      setItems(updatedData);
       setDialogState({ open: false, mode: "create" });
     } catch (error) {
       console.error("Failed to save baseline:", error);
+      let errorMessage = "儲存基線時發生錯誤";
+
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid target item")) {
+          errorMessage = "無效的標的選項";
+        } else if (error.message.includes("Company is required")) {
+          errorMessage = "未指定公司";
+        } else if (error.message.includes("Failed to create baseline")) {
+          errorMessage =
+            dialogState.mode === "edit"
+              ? "更新基線失敗，請確認資料是否正確"
+              : "建立基線失敗，請確認資料是否正確";
+        } else if (error.message.includes("MISSING_BASELINE_CODE")) {
+          errorMessage = "基線代碼為必填欄位";
+        } else if (error.message.includes("ENERGY_TYPE_REQUIRED")) {
+          errorMessage = "能源分類需要選擇能源類型";
+        } else if (error.message.includes("SHARED_GROUP_REQUIRED")) {
+          errorMessage = "設備群組需要選擇共用群組";
+        } else if (error.message.includes("WORK_AREA_REQUIRED")) {
+          errorMessage = "工作場域需要選擇工作區域";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -428,6 +482,7 @@ export default function ENB() {
     if (!data) return undefined;
     return {
       ...data,
+      ebSgt: data.ebSgt,
       X1State: data.X1 !== "未使用" && data.X1 !== "",
       X2State: data.X2 !== "未使用" && data.X2 !== "",
       X3State: data.X3 !== "未使用" && data.X3 !== "",
@@ -438,19 +493,8 @@ export default function ENB() {
 
   const handleBaselineClick = async (baseline: ENBFormData) => {
     try {
-      // Set initial X value to the first available X
-      const initialX =
-        ["X1", "X2", "X3", "X4", "X5"].find(
-          (x) =>
-            baseline[x as keyof ENBFormData] !== "未使用" &&
-            baseline[x as keyof ENBFormData] !== ""
-        ) || "X1";
-
-      // Set the selected X first so the useEffect doesn't trigger an extra fetch
-      setSelectedX(initialX);
-
       const response = await fetch(
-        `/api/enb?ebSgt=${baseline.ebSgt}&feature=${initialX}`
+        `/api/enb?company=${companyName}&ebSgt=${baseline.ebSgt}&feature=X1`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch baseline details");
@@ -509,6 +553,11 @@ export default function ENB() {
         X3: baseline.X3,
         X4: baseline.X4,
         X5: baseline.X5,
+        X1Unit: baseline.X1Unit,
+        X2Unit: baseline.X2Unit,
+        X3Unit: baseline.X3Unit,
+        X4Unit: baseline.X4Unit,
+        X5Unit: baseline.X5Unit,
         ebSgt: baseline.ebSgt || 0,
       };
 
@@ -540,60 +589,163 @@ export default function ENB() {
     setDeleteDetailConfirm(row);
   };
 
-  const handleDetailSubmit = async (data: Omit<BaselineData, "id">) => {
-    if (!selectedBaseline || !currentBaselineDetails) return;
+  const handleDateValidation = (date: string) => {
+    if (!selectedBaseline) return false;
 
-    try {
-      const newData = editingDetail
-        ? currentBaselineDetails.baselineData.map((item) =>
-            item.date === editingDetail.date
-              ? { ...data, id: editingDetail.id }
-              : item
-          )
-        : [
-            ...currentBaselineDetails.baselineData,
-            {
-              ...data,
-              // Create a unique ID using timestamp and date
-              id: `${Date.now()}_${data.date.replace(/-/g, "")}`,
-              createdTime: new Date().toISOString(),
-              updatedTime: new Date().toISOString(),
-            },
-          ];
-
-      setBaselineDetails((prev) => ({
-        ...prev,
-        [selectedBaseline.baselineCode]: {
-          ...currentBaselineDetails,
-          baselineData: newData,
-        },
-      }));
-
-      setDetailDialogOpen(false);
-      setEditingDetail(undefined);
-    } catch (error) {
-      console.error("Failed to save baseline detail:", error);
-    }
+    const existingDetails = currentBaselineDetails?.baselineData || [];
+    return existingDetails.some((detail) => {
+      // If editing, exclude the current record from duplicate check
+      if (editingDetail?.id === detail.id) return false;
+      return detail.date === date;
+    });
   };
 
-  const handleDeleteDetailConfirmed = async (row: BaselineData) => {
-    if (!selectedBaseline || !currentBaselineDetails) return;
+  const handleDetailSubmit = async (data: Omit<BaselineData, "id">) => {
+    if (!selectedBaseline) return;
 
     try {
-      const updatedBaselineData = currentBaselineDetails.baselineData.filter(
-        (item) => item.date !== row.date || item.value !== row.value
+      const response = await fetch(
+        `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...data,
+            id: editingDetail?.id,
+          }),
+        }
       );
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "儲存基線明細時發生錯誤");
+      }
+
+      // After successful save, close dialog and clear editing state
+      setDetailDialogOpen(false);
+      setEditingDetail(undefined);
+
+      // Fetch all required data to update the UI
+      const [baselineResponse, regressionResponse] = await Promise.all([
+        // Fetch updated baseline details
+        fetch(
+          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+        ),
+        // Fetch updated regression data
+        fetch(
+          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+        ),
+      ]);
+
+      if (!baselineResponse.ok || !regressionResponse.ok) {
+        throw new Error("Failed to fetch updated data");
+      }
+
+      const [baselineData, regressionData] = await Promise.all([
+        baselineResponse.json(),
+        regressionResponse.json(),
+      ]);
+
+      // Update all the data in state
       setBaselineDetails((prev) => ({
         ...prev,
         [selectedBaseline.baselineCode]: {
           ...prev[selectedBaseline.baselineCode],
-          baselineData: updatedBaselineData,
+          baselineData: baselineData.baselineDetails,
+          regressionData: regressionData.regressionData,
+          comparisonData: regressionData.comparisonData,
+          chartData: regressionData.chartData,
         },
       }));
+    } catch (error) {
+      console.error("Failed to save baseline detail:", error);
+      let errorMessage = "儲存基線明細時發生錯誤";
+
+      if (error instanceof Error) {
+        if (error.message.includes("DATE_REQUIRED")) {
+          errorMessage = "期別為必填欄位";
+        } else if (error.message.includes("VALUE_REQUIRED")) {
+          errorMessage = "監測值為必填欄位";
+        } else if (error.message.includes("Failed to create baseline detail")) {
+          errorMessage = "建立基線明細失敗，請確認資料是否正確";
+        } else if (error.message.includes("Failed to update baseline detail")) {
+          errorMessage = "更新基線明細失敗，請確認資料是否正確";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      alert(errorMessage);
+    }
+  };
+
+  const handleDeleteDetailConfirmed = async (row: BaselineData) => {
+    if (!selectedBaseline) return;
+
+    try {
+      const response = await fetch(
+        `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&date=${row.date}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "刪除基線明細時發生錯誤");
+      }
+
       setDeleteDetailConfirm(null);
+
+      // Fetch all required data to update the UI
+      const [baselineResponse, regressionResponse] = await Promise.all([
+        // Fetch updated baseline details
+        fetch(
+          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+        ),
+        // Fetch updated regression data
+        fetch(
+          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+        ),
+      ]);
+
+      if (!baselineResponse.ok || !regressionResponse.ok) {
+        throw new Error("Failed to fetch updated data");
+      }
+
+      const [baselineData, regressionData] = await Promise.all([
+        baselineResponse.json(),
+        regressionResponse.json(),
+      ]);
+
+      // Update all the data in state
+      setBaselineDetails((prev) => ({
+        ...prev,
+        [selectedBaseline.baselineCode]: {
+          ...prev[selectedBaseline.baselineCode],
+          baselineData: baselineData.baselineDetails,
+          regressionData: regressionData.regressionData,
+          comparisonData: regressionData.comparisonData,
+          chartData: regressionData.chartData,
+        },
+      }));
     } catch (error) {
       console.error("Failed to delete baseline detail:", error);
+      let errorMessage = "刪除基線明細時發生錯誤";
+
+      if (error instanceof Error) {
+        if (error.message.includes("DATE_REQUIRED")) {
+          errorMessage = "期別為必填欄位";
+        } else if (error.message.includes("Failed to delete baseline detail")) {
+          errorMessage = "刪除基線明細失敗，請稍後再試";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -848,7 +1000,7 @@ export default function ENB() {
                   }}
                   onEvents={{
                     finished: () => {
-                      console.log(`Chart redrawn for ${selectedX}`);
+                      // Remove console log
                     },
                   }}
                 />
@@ -966,6 +1118,7 @@ export default function ENB() {
         title="基線明細"
         description="基線明細"
         fields={getActiveDetailFields}
+        onDateValidation={handleDateValidation}
       />
 
       {/* Delete Confirmation Dialog for Baseline */}

@@ -13,6 +13,11 @@ interface ENBData {
   X3?: string;
   X4?: string;
   X5?: string;
+  X1Unit?: string;
+  X2Unit?: string;
+  X3Unit?: string;
+  X4Unit?: string;
+  X5Unit?: string;
   ebSgt: number;
 }
 
@@ -131,11 +136,11 @@ interface BaselineRegressionResponse {
   Caption: string;
 }
 
-async function fetchENBData(): Promise<ENBData[]> {
+async function fetchENBData(company: string): Promise<ENBData[]> {
   try {
     // First try to get the ENB data
     const enbResponse = await fetch(
-      "http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineMain.ashx?_search=false&rows=1000&page=1&sidx=EbSgt&sord=asc"
+      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineMain.ashx?schema=${company}&_search=false&rows=10000&page=1&sidx=EnergyBaselineName&sord=asc`
     );
 
     if (!enbResponse.ok) {
@@ -177,13 +182,18 @@ async function fetchENBData(): Promise<ENBData[]> {
         X3: row.UseX3 ? row.CaptionX3 || "" : "未使用",
         X4: row.UseX4 ? row.CaptionX4 || "" : "未使用",
         X5: row.UseX5 ? row.CaptionX5 || "" : "未使用",
+        X1Unit: row.UseX1 ? row.UnitX1 || "" : "",
+        X2Unit: row.UseX2 ? row.UnitX2 || "" : "",
+        X3Unit: row.UseX3 ? row.UnitX3 || "" : "",
+        X4Unit: row.UseX4 ? row.UnitX4 || "" : "",
+        X5Unit: row.UseX5 ? row.UnitX5 || "" : "",
         ebSgt: row.EbSgt,
       };
       // console.log("Transformed item:", result);
       return result;
     });
 
-    console.log("Final Transformed Data:", transformedData);
+    // console.log("Final Transformed Data:", transformedData);
     return transformedData;
   } catch (error) {
     console.error("Failed to fetch ENB data:", error);
@@ -195,13 +205,18 @@ function transformDate(dateString: string): string {
   // Remove "/Date(" and ")/" and convert to number
   const timestamp = parseInt(dateString.replace(/\/Date\((\d+)\)\//, "$1"));
   const date = new Date(timestamp);
+  // Add 8 hours for GMT+8
+  date.setHours(date.getHours() + 8);
   return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
 }
 
-async function fetchBaselineDetails(ebSgt: number): Promise<BaselineData[]> {
+async function fetchBaselineDetails(
+  company: string,
+  ebSgt: number
+): Promise<BaselineData[]> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?EbSgt=${ebSgt}&_search=false&rows=10000&page=1&sidx=StartDate&sord=asc`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&EbSgt=${ebSgt}&rows=10000&page=1&sidx=StartDate&sord=asc`
     );
 
     if (!response.ok) {
@@ -231,6 +246,7 @@ async function fetchBaselineDetails(ebSgt: number): Promise<BaselineData[]> {
 }
 
 async function fetchRegressionStatic(
+  company: string,
   ebSgt: number,
   feature: string
 ): Promise<{
@@ -243,7 +259,7 @@ async function fetchRegressionStatic(
 }> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=regressionstatic&EbSgt=${ebSgt}&Feature=${feature}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=regressionstatic&EbSgt=${ebSgt}&Feature=${feature}`
     );
 
     if (!response.ok) {
@@ -336,12 +352,13 @@ async function fetchRegressionStatic(
 }
 
 async function fetchBaselineRegression(
+  company: string,
   ebSgt: number,
   feature: string
 ): Promise<BaselineRegressionResponse> {
   try {
     const response = await fetch(
-      `http://192.168.0.55:8080/SystemOptions/GetEnergyBaselineDetail.ashx?selecttype=baselineregression&EbSgt=${ebSgt}&Feature=${feature}`
+      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=baselineregression&EbSgt=${ebSgt}&Feature=${feature}`
     );
 
     if (!response.ok) {
@@ -368,17 +385,22 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     try {
+      const { company } = req.query;
       const ebSgt = req.query.ebSgt;
       const feature = req.query.feature;
+
+      if (!company || typeof company !== "string") {
+        return res.status(400).json({ message: "Company is required" });
+      }
 
       if (ebSgt && !Array.isArray(ebSgt)) {
         if (feature && !Array.isArray(feature)) {
           // Fetch all required data
           const [regressionStatic, baselineDetails, baselineRegression] =
             await Promise.all([
-              fetchRegressionStatic(Number(ebSgt), feature),
-              fetchBaselineDetails(Number(ebSgt)),
-              fetchBaselineRegression(Number(ebSgt), feature),
+              fetchRegressionStatic(company, Number(ebSgt), feature),
+              fetchBaselineDetails(company, Number(ebSgt)),
+              fetchBaselineRegression(company, Number(ebSgt), feature),
             ]);
 
           // Calculate regression line points
@@ -408,11 +430,11 @@ export default async function handler(
           });
         }
         // If no feature provided, just return baseline details
-        const details = await fetchBaselineDetails(Number(ebSgt));
+        const details = await fetchBaselineDetails(company, Number(ebSgt));
         return res.status(200).json({ baselineDetails: details });
       }
 
-      const data = await fetchENBData();
+      const data = await fetchENBData(company);
       const targetItems = Array.from(
         new Set(data.map((item) => item.targetItem))
       ).filter(Boolean);
@@ -442,8 +464,332 @@ export default async function handler(
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  } else if (req.method === "POST") {
+    try {
+      const { company, ebSgt } = req.query;
+      const formData = req.body;
+
+      if (!company || typeof company !== "string") {
+        return res.status(400).json({
+          status: "error",
+          code: "COMPANY_REQUIRED",
+          message: "Company is required",
+        });
+      }
+
+      // If ebSgt is in query params, this is a detail record operation
+      if (ebSgt && !Array.isArray(ebSgt)) {
+        // Validate required fields for detail
+        if (!formData.date) {
+          return res.status(400).json({
+            status: "error",
+            code: "DATE_REQUIRED",
+            message: "期別為必填欄位",
+          });
+        }
+
+        if (typeof formData.value !== "number") {
+          return res.status(400).json({
+            status: "error",
+            code: "VALUE_REQUIRED",
+            message: "監測值為必填欄位",
+          });
+        }
+
+        // Prepare POST data for detail
+        const postData = new URLSearchParams();
+        postData.append("oper", formData.id ? "edit" : "add");
+        postData.append("schema", company);
+        postData.append("EbSgt", ebSgt);
+        postData.append("StartDate", formData.date);
+        postData.append("Value", formData.value.toString());
+        postData.append("X1", formData.X1?.toString() || "");
+        postData.append("X2", formData.X2?.toString() || "");
+        postData.append("X3", formData.X3?.toString() || "");
+        postData.append("X4", formData.X4?.toString() || "");
+        postData.append("X5", formData.X5?.toString() || "");
+
+        console.log(
+          "Sending baseline detail data:",
+          Object.fromEntries(postData)
+        );
+
+        const response = await fetch(
+          `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: postData.toString(),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("External API error:", errorText);
+          return res.status(response.status).json({
+            status: "error",
+            code: "EXTERNAL_API_ERROR",
+            message: `Failed to ${
+              formData.id ? "update" : "create"
+            } baseline detail: ${errorText}`,
+            details: {
+              statusCode: response.status,
+              errorText,
+            },
+          });
+        }
+
+        // Fetch updated baseline details
+        const updatedDetails = await fetchBaselineDetails(
+          company,
+          Number(ebSgt)
+        );
+        return res.status(200).json({ baselineDetails: updatedDetails });
+      }
+
+      // Existing baseline creation/update code
+      const sourceTypeCodeMap = {
+        能源分類: "C",
+        全公司: "A",
+        工作場域: "M",
+        設備群組: "G",
+      } as const;
+
+      type TargetItem = keyof typeof sourceTypeCodeMap;
+
+      if (!formData.baselineCode) {
+        return res.status(400).json({
+          status: "error",
+          code: "MISSING_BASELINE_CODE",
+          message: "基線代碼為必填欄位",
+        });
+      }
+
+      if (!formData.targetItem || !(formData.targetItem in sourceTypeCodeMap)) {
+        return res.status(400).json({
+          status: "error",
+          code: "INVALID_TARGET_ITEM",
+          message: "無效的標的選項",
+        });
+      }
+
+      if (
+        formData.targetItem === "能源分類" &&
+        formData.energyType === "(未設定)"
+      ) {
+        return res.status(400).json({
+          status: "error",
+          code: "ENERGY_TYPE_REQUIRED",
+          message: "能源分類需要選擇能源類型",
+        });
+      }
+
+      if (
+        formData.targetItem === "設備群組" &&
+        formData.sharedGroup === "(未設定)"
+      ) {
+        return res.status(400).json({
+          status: "error",
+          code: "SHARED_GROUP_REQUIRED",
+          message: "設備群組需要選擇共用群組",
+        });
+      }
+
+      if (
+        formData.targetItem === "工作場域" &&
+        formData.workArea === "(未設定)"
+      ) {
+        return res.status(400).json({
+          status: "error",
+          code: "WORK_AREA_REQUIRED",
+          message: "工作場域需要選擇工作區域",
+        });
+      }
+
+      const postData = new URLSearchParams();
+      postData.append("oper", formData.ebSgt ? "edit" : "add");
+      postData.append("schema", company);
+      postData.append("EnergyBaselineName", formData.baselineCode);
+      postData.append(
+        "SourceTypeCode",
+        sourceTypeCodeMap[formData.targetItem as TargetItem]
+      );
+      postData.append("Remark", formData.note || "");
+      postData.append(
+        "EnergyTypeID",
+        formData.energyType === "(未設定)" ? "" : formData.energyType
+      );
+      postData.append(
+        "EnergyGroupID",
+        formData.sharedGroup === "(未設定)" ? "" : formData.sharedGroup
+      );
+      postData.append(
+        "EnergyAreaID",
+        formData.workArea === "(未設定)" ? "" : formData.workArea
+      );
+      postData.append("EbSgt", formData.ebSgt ? formData.ebSgt.toString() : "");
+      postData.append("IsLock", formData.locked === "鎖定" ? "true" : "false");
+
+      for (let i = 1; i <= 5; i++) {
+        const stateKey = `X${i}State` as keyof typeof formData;
+        const valueKey = `X${i}` as keyof typeof formData;
+        const unitKey = `X${i}Unit` as keyof typeof formData;
+        const isUsed =
+          formData[stateKey] ||
+          (formData[valueKey] && formData[valueKey] !== "未使用");
+        postData.append(`UseX${i}`, isUsed ? "true" : "false");
+        postData.append(`CaptionX${i}`, isUsed ? formData[valueKey] : "");
+        postData.append(`UnitX${i}`, isUsed ? formData[unitKey] || "" : "");
+      }
+
+      console.log("Sending request with data:", Object.fromEntries(postData));
+
+      const response = await fetch(
+        `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineMain.ashx`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: postData.toString(),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("External API error:", errorText);
+        return res.status(response.status).json({
+          status: "error",
+          code: "EXTERNAL_API_ERROR",
+          message: `Failed to ${
+            formData.ebSgt ? "update" : "create"
+          } baseline: ${errorText}`,
+          details: {
+            statusCode: response.status,
+            errorText,
+          },
+        });
+      }
+
+      const updatedData = await fetchENBData(company);
+      return res.status(200).json(updatedData);
+    } catch (error) {
+      console.error("API Error:", error);
+      return res.status(500).json({
+        status: "error",
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        details:
+          error instanceof Error
+            ? {
+                name: error.name,
+                stack:
+                  process.env.NODE_ENV === "development"
+                    ? error.stack
+                    : undefined,
+              }
+            : undefined,
+      });
+    }
+  } else if (req.method === "DELETE") {
+    try {
+      const { company, ebSgt, date } = req.query;
+
+      if (!company || typeof company !== "string") {
+        return res.status(400).json({
+          status: "error",
+          code: "COMPANY_REQUIRED",
+          message: "Company is required",
+        });
+      }
+
+      if (!ebSgt || typeof ebSgt !== "string") {
+        return res.status(400).json({
+          status: "error",
+          code: "EBSGT_REQUIRED",
+          message: "Baseline ID (ebSgt) is required",
+        });
+      }
+
+      if (!date || typeof date !== "string") {
+        return res.status(400).json({
+          status: "error",
+          code: "DATE_REQUIRED",
+          message: "Date is required for deletion",
+        });
+      }
+
+      const postData = new URLSearchParams();
+      postData.append("oper", "del");
+      postData.append("schema", company);
+      postData.append("EbSgt", ebSgt);
+      postData.append("StartDate", date);
+
+      console.log(
+        "Sending delete request with data:",
+        Object.fromEntries(postData)
+      );
+
+      const response = await fetch(
+        `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body: postData.toString(),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("External API error:", errorText);
+        return res.status(response.status).json({
+          status: "error",
+          code: "EXTERNAL_API_ERROR",
+          message: `Failed to delete baseline detail: ${errorText}`,
+          details: {
+            statusCode: response.status,
+            errorText,
+          },
+        });
+      }
+
+      // Small delay before fetching updated details
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Fetch updated baseline details
+      const updatedDetails = await fetchBaselineDetails(company, Number(ebSgt));
+      return res.status(200).json({ baselineDetails: updatedDetails });
+    } catch (error) {
+      console.error("API Error:", error);
+      return res.status(500).json({
+        status: "error",
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        details:
+          error instanceof Error
+            ? {
+                name: error.name,
+                stack:
+                  process.env.NODE_ENV === "development"
+                    ? error.stack
+                    : undefined,
+              }
+            : undefined,
+      });
+    }
   } else {
-    res.setHeader("Allow", ["GET"]);
+    res.setHeader("Allow", ["GET", "POST", "DELETE"]);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 }

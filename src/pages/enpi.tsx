@@ -15,7 +15,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { energyECFService } from "@/lib/energy-ecf/service";
+import { getECFs } from "@/lib/energy-ecf/service";
+import type { ECF } from "@/lib/energy-ecf/types";
+import { getBaselineList } from "@/lib/energy-enb/service";
+import { useCompany } from "../contexts/CompanyContext";
 
 interface IndicatorData {
   date: string;
@@ -30,7 +33,7 @@ interface IndicatorData {
 interface Indicator {
   id: string;
   name: string;
-  baselineCode: string;
+  baselineName: string;
   energyType: {
     id: string;
     name: string;
@@ -38,9 +41,10 @@ interface Indicator {
   };
   unit: string;
   startDate: string;
-  frequency: "月" | "週";
+  frequency: "月" | "週" | "日" | "季";
   dataType: string;
   data: IndicatorData[];
+  remark: string | null;
 }
 
 interface DataPoint extends BaseItem {
@@ -112,16 +116,23 @@ export default function ENPI() {
   >();
   const [deleteDataPointConfirm, setDeleteDataPointConfirm] =
     useState<DataPoint | null>(null);
+  const [baselineList, setBaselineList] = useState<Record<string, string>>({});
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const [indicatorsResponse, ecfsData] = await Promise.all([
-          fetch("/api/enpi"),
-          energyECFService.getECFs(),
-        ]);
+        const [indicatorsResponse, ecfsData, baselineListData] =
+          await Promise.all([
+            fetch(`/api/enpi?company=${companyName}`),
+            getECFs(companyName),
+            getBaselineList(companyName),
+          ]);
 
         const indicatorsData = await indicatorsResponse.json();
+        setBaselineList(baselineListData);
 
         if (indicatorsData.indicators) {
           // Map ECF data to indicators
@@ -139,11 +150,13 @@ export default function ENPI() {
               energyType: {
                 id: indicator.energyType.id,
                 name:
-                  ecfsData.find((ecf) => ecf.code === indicator.energyType.id)
-                    ?.name || "(未設定)",
+                  ecfsData.find(
+                    (ecf: ECF) => ecf.code === indicator.energyType.id
+                  )?.name || "(未設定)",
                 unit:
-                  ecfsData.find((ecf) => ecf.code === indicator.energyType.id)
-                    ?.unit || indicator.energyType.unit,
+                  ecfsData.find(
+                    (ecf: ECF) => ecf.code === indicator.energyType.id
+                  )?.unit || indicator.energyType.unit,
               },
             })
           );
@@ -156,7 +169,7 @@ export default function ENPI() {
     };
 
     void loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   // Transform indicators to BaseItems for the ListingPage component
   const baseItems = indicators.map((indicator) => ({
@@ -180,6 +193,7 @@ export default function ENPI() {
   const handleEditIndicator = (item: BaseItem) => {
     const indicator = indicators.find((i) => i.id === item.id);
     if (indicator) {
+      console.log("Editing indicator:", indicator);
       setEditingIndicator(indicator);
       setDialogOpen(true);
     }
@@ -194,78 +208,97 @@ export default function ENPI() {
 
   const handleDeleteConfirmed = async (indicator: Indicator) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setIndicators((prev) => {
-        const newIndicators = prev.filter((item) => item.id !== indicator.id);
-        // Calculate if we need to adjust the current page
-        const totalPages = Math.max(1, Math.ceil(newIndicators.length / 4)); // 4 is itemsPerPage
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages);
+      console.log("Deleting indicator:", indicator);
+      const response = await fetch(
+        `/api/enpi?company=${companyName}&id=${indicator.id}`,
+        {
+          method: "DELETE",
         }
-        return newIndicators;
-      });
+      );
+
+      console.log("Delete response status:", response.status);
+      const result = await response.json();
+      console.log("Delete response:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to delete indicator");
+      }
+
+      setIndicators(result.indicators);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete indicator:", error);
+      // TODO: Show error message to user
     }
   };
 
   const handleIndicatorSubmit = async (data: EnpiFormData) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
+      const requestData = {
+        name: data.title,
+        baselineName: data.baselineName,
+        ebSgt: data.ebSgt,
+        energyType: data.energyType,
+        unit: data.unit,
+        startDate: data.startDate,
+        frequency: data.frequency,
+        dataType: data.dataType,
+        remark: data.remark,
+      };
+
       if (editingIndicator) {
-        // Update existing indicator
-        setIndicators((prev) =>
-          prev.map((indicator) =>
-            indicator.id === editingIndicator.id
-              ? {
-                  ...indicator,
-                  name: data.title,
-                  baselineCode: data.baselineCode,
-                  energyType: data.energyType,
-                  unit: data.unit,
-                  startDate: data.startDate,
-                  frequency: data.frequency,
-                  dataType: data.dataType,
-                  data: indicator.data.map((item) => ({
-                    ...item,
-                    remark: data.remark ?? null,
-                  })),
-                }
-              : indicator
-          )
-        );
-      } else {
-        // Create new indicator with a temporary ID
-        const newIndicator: Indicator = {
-          id: `temp_${Date.now()}`,
-          name: data.title,
-          baselineCode: data.baselineCode,
-          energyType: data.energyType,
-          unit: data.unit,
-          startDate: data.startDate,
-          frequency: data.frequency,
-          dataType: data.dataType,
-          data: [
-            {
-              date: new Date().toISOString().split("T")[0],
-              actualValue: 0,
-              theoreticalValue: 0,
-              maxDeviation: 0,
-              deviation: 0,
-              remark: data.remark ?? null,
-            },
-          ],
-        };
-        setIndicators((prev) => [...prev, newIndicator]);
+        console.log("Updating indicator with data:", {
+          ...requestData,
+          id: editingIndicator.id,
+          currentBaselineName: editingIndicator.baselineName,
+          newBaselineName: data.baselineName,
+          ebSgt: data.ebSgt,
+        });
+        const response = await fetch(`/api/enpi?company=${companyName}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ...requestData, id: editingIndicator.id }),
+        });
+
+        console.log("Edit response status:", response.status);
+        const result = await response.json();
+        console.log("Edit response data:", result);
+
+        if (!response.ok) {
+          throw new Error(result.message || "Failed to update indicator");
+        }
+
+        setIndicators(result.indicators);
+        setDialogOpen(false);
+        setEditingIndicator(undefined);
+        return;
       }
 
+      console.log("Creating new indicator:", requestData);
+      const response = await fetch(`/api/enpi?company=${companyName}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      console.log("Response status:", response.status);
+      const result = await response.json();
+      console.log("Response data:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to create indicator");
+      }
+
+      setIndicators(result.indicators);
       setDialogOpen(false);
       setEditingIndicator(undefined);
     } catch (error) {
       console.error("Failed to save indicator:", error);
+      // TODO: Show error message to user
     }
   };
 
@@ -281,10 +314,10 @@ export default function ENPI() {
           </h3>
           <div className="flex items-center gap-2">
             <p className="text-sm text-gray-600">
-              基準線代碼: {indicator.baselineCode}
+              基準線名稱: {indicator.baselineName}
             </p>
             <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 whitespace-nowrap">
-              {indicator.frequency === "月" ? "月頻率" : "週頻率"}
+              {indicator.frequency}頻率
             </span>
           </div>
         </div>
@@ -293,9 +326,7 @@ export default function ENPI() {
           <p>單位: {indicator.unit}</p>
           <p>數據類型: {indicator.dataType}</p>
           <p>開始日期: {indicator.startDate}</p>
-          <p className="col-span-2">
-            備註: {indicator.data?.[0]?.remark || "(無)"}
-          </p>
+          <p className="col-span-2">備註: {indicator.remark || "(無)"}</p>
         </div>
       </div>
     );
@@ -493,77 +524,150 @@ export default function ENPI() {
     setDeleteDataPointConfirm(row);
   };
 
+  const handleDeleteDataPointConfirmed = async (dataPoint: DataPoint) => {
+    try {
+      if (!currentIndicator) return;
+
+      // Create form data for deletion
+      const formData = new URLSearchParams();
+      formData.append("oper", "del");
+      formData.append("schema", companyName);
+      formData.append("EnPiID", currentIndicator.id);
+      formData.append("StartDate", dataPoint.date);
+
+      console.log("Delete form data:", formData.toString());
+
+      const response = await fetch(
+        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
+
+      console.log("Delete response status:", response.status);
+      const responseText = await response.text();
+      console.log("Delete response text:", responseText);
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete data point: ${responseText}`);
+      }
+
+      // Fetch updated data
+      const updatedResponse = await fetch(`/api/enpi?company=${companyName}`);
+      const result = await updatedResponse.json();
+
+      if (result.indicators) {
+        setIndicators(result.indicators);
+      }
+
+      setDeleteDataPointConfirm(null);
+    } catch (error) {
+      console.error("Failed to delete data point:", error);
+      // TODO: Show error message to user
+    }
+  };
+
   const handleDataPointSubmit = async (data: Omit<DataPoint, "id">) => {
     try {
       if (!currentIndicator) return;
 
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
+      // Create form data for the POST request
+      const formData = new URLSearchParams();
+      formData.append("oper", editingDataPoint ? "edit" : "add");
+      formData.append("schema", companyName);
+      formData.append("EnPiID", currentIndicator.id);
+
       if (editingDataPoint) {
-        // Update existing data point
-        setIndicators((prev) =>
-          prev.map((indicator) => {
-            if (indicator.id === currentIndicator.id) {
-              return {
-                ...indicator,
-                data: indicator.data.map((item) =>
-                  item.date === editingDataPoint.date
-                    ? {
-                        ...data,
-                        remark: data.remark || null,
-                      }
-                    : item
-                ),
-              };
-            }
-            return indicator;
-          })
-        );
+        // For edit, we need to send both the original date (as id) and the new date (if changed)
+        formData.append("id", editingDataPoint.date); // Original date as identifier
+        formData.append("StartDate", data.date); // New date (can be same as original)
       } else {
-        // Create new data point
-        setIndicators((prev) =>
-          prev.map((indicator) => {
-            if (indicator.id === currentIndicator.id) {
-              return {
-                ...indicator,
-                data: [...indicator.data, data],
-              };
-            }
-            return indicator;
-          })
+        formData.append("StartDate", data.date);
+      }
+
+      formData.append("Value", data.actualValue.toString());
+      formData.append("X1", data.X1?.toString() || "");
+      formData.append("X2", data.X2?.toString() || "");
+      formData.append("X3", data.X3?.toString() || "");
+      formData.append("X4", data.X4?.toString() || "");
+      formData.append("X5", data.X5?.toString() || "");
+      formData.append("Remark", data.remark || "");
+
+      console.log(
+        "Form data for",
+        editingDataPoint ? "edit" : "add",
+        ":",
+        formData.toString()
+      );
+
+      const response = await fetch(
+        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
+
+      console.log("Response status:", response.status);
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to ${
+            editingDataPoint ? "update" : "add"
+          } data point: ${responseText}`
         );
+      }
+
+      // After successful edit/add, fetch the updated theoretical values
+      const estimateUrl = `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?selecttype=estimatestatic&EnPiID=${currentIndicator.id}&Feature=X1&schema=${companyName}`;
+
+      console.log("Fetching updated theoretical values from:", estimateUrl);
+
+      const estimateResponse = await fetch(estimateUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      console.log("Estimate response status:", estimateResponse.status);
+      const estimateText = await estimateResponse.text();
+      console.log("Estimate response:", estimateText);
+
+      // Fetch updated data to refresh the UI
+      const updatedResponse = await fetch(`/api/enpi?company=${companyName}`);
+      const result = await updatedResponse.json();
+
+      if (result.indicators) {
+        setIndicators(result.indicators);
       }
 
       setDetailDialogOpen(false);
       setEditingDataPoint(undefined);
     } catch (error) {
       console.error("Failed to save data point:", error);
+      // TODO: Show error message to user
     }
   };
 
-  const handleDeleteDataPointConfirmed = async (dataPoint: DataPoint) => {
-    try {
-      if (!currentIndicator) return;
+  const handleDateValidation = (date: string) => {
+    if (!currentIndicator) return false;
 
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setIndicators((prev) =>
-        prev.map((indicator) => {
-          if (indicator.id === currentIndicator.id) {
-            return {
-              ...indicator,
-              data: indicator.data.filter(
-                (item) => item.date !== dataPoint.date
-              ),
-            };
-          }
-          return indicator;
-        })
-      );
-      setDeleteDataPointConfirm(null);
-    } catch (error) {
-      console.error("Failed to delete data point:", error);
-    }
+    const existingDates = currentIndicator.data.map((item) => item.date);
+    return existingDates.some((existingDate) => {
+      // If editing, exclude the current record from duplicate check
+      if (editingDataPoint?.date === existingDate) return false;
+      return existingDate === date;
+    });
   };
 
   // Transform indicator data to include required BaseItem properties
@@ -683,7 +787,11 @@ export default function ENPI() {
           editingIndicator
             ? {
                 title: editingIndicator.name,
-                baselineCode: editingIndicator.baselineCode,
+                baselineName: editingIndicator.baselineName,
+                ebSgt:
+                  Object.entries(baselineList).find(
+                    ([, name]) => name === editingIndicator.baselineName
+                  )?.[0] || "",
                 energyType: editingIndicator.energyType,
                 unit: editingIndicator.unit,
                 startDate: editingIndicator.startDate,
@@ -704,71 +812,58 @@ export default function ENPI() {
         mode={editingDataPoint ? "edit" : "create"}
         title="數據"
         description="數據"
+        onDateValidation={handleDateValidation}
         fields={[
-          {
-            key: "date",
-            label: "日期",
-            type: "date",
-            required: true,
-          },
+          ...(editingDataPoint
+            ? []
+            : [
+                {
+                  key: "date",
+                  label: "日期",
+                  type: "date" as const,
+                  required: true,
+                },
+              ]),
           {
             key: "actualValue",
             label: "實際值",
-            type: "number",
+            type: "number" as const,
             required: true,
           },
           {
             key: "X1",
             label: "X1",
-            type: "number",
+            type: "number" as const,
             required: false,
           },
           {
             key: "X2",
             label: "X2",
-            type: "number",
+            type: "number" as const,
             required: false,
           },
           {
             key: "X3",
             label: "X3",
-            type: "number",
+            type: "number" as const,
             required: false,
           },
           {
             key: "X4",
             label: "X4",
-            type: "number",
+            type: "number" as const,
             required: false,
           },
           {
             key: "X5",
             label: "X5",
-            type: "number",
+            type: "number" as const,
             required: false,
-          },
-          {
-            key: "theoreticalValue",
-            label: "理論值",
-            type: "number",
-            required: true,
-          },
-          {
-            key: "deviation",
-            label: "偏差率 (%)",
-            type: "number",
-            required: true,
-          },
-          {
-            key: "maxDeviation",
-            label: "最大偏差率 (%)",
-            type: "number",
-            required: true,
           },
           {
             key: "remark",
             label: "備註",
-            type: "text",
+            type: "text" as const,
             required: false,
           },
         ]}

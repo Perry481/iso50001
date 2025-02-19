@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
-import { areaSettingsService } from "@/lib/area-settings/service";
-import { energyECFService } from "@/lib/energy-ecf/service";
-import { deptListService } from "@/lib/dept-list/service";
+import { getAreas } from "@/lib/area-settings/service";
+import { getECFs } from "@/lib/energy-ecf/service";
+import { getSubjects } from "@/lib/energy-subject/service";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export interface BaselineFormData {
   baselineCode: string;
@@ -39,6 +40,11 @@ export interface BaselineFormData {
   X3State: boolean;
   X4State: boolean;
   X5State: boolean;
+  X1Unit?: string;
+  X2Unit?: string;
+  X3Unit?: string;
+  X4Unit?: string;
+  X5Unit?: string;
   ebSgt?: number;
 }
 
@@ -51,12 +57,15 @@ interface BaselineDialogProps {
 }
 
 interface SelectOptions {
-  targetItems: string[];
+  targetItems: readonly string[];
   energyTypes: string[];
   workAreas: string[];
   sharedGroups: string[];
   lockedStates: string[];
 }
+
+const TARGET_ITEMS = ["全公司", "能源分類", "設備群組", "工作場域"] as const;
+// type TargetItem = (typeof TARGET_ITEMS)[number];
 
 export function BaselineDialog({
   open,
@@ -83,8 +92,14 @@ export function BaselineDialog({
     X3State: false,
     X4State: false,
     X5State: false,
+    X1Unit: "",
+    X2Unit: "",
+    X3Unit: "",
+    X4Unit: "",
+    X5Unit: "",
   });
 
+  const { companyName } = useCompany();
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<SelectOptions>({
     targetItems: [],
@@ -103,12 +118,8 @@ export function BaselineDialog({
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        // Fetch base options from API
-        const response = await fetch("/api/enb");
-        const result = await response.json();
-
         // Fetch energy types from service
-        const ecfData = await energyECFService.getECFs();
+        const ecfData = await getECFs(companyName);
         const energyTypeMap: Record<string, string> = {};
         ecfData.forEach((ecf) => {
           energyTypeMap[ecf.code] = ecf.name;
@@ -116,37 +127,47 @@ export function BaselineDialog({
         setEnergyTypeLabels(energyTypeMap);
 
         // Fetch areas from service
-        const areaData = await areaSettingsService.getAreas();
+        const areaData = await getAreas(companyName);
         const areaMap: Record<string, string> = {};
         areaData.forEach((area) => {
           areaMap[area.id] = area.name;
         });
         setAreaLabels(areaMap);
 
-        // Fetch departments from service
-        const deptData = await deptListService.getDepts();
-        const deptMap: Record<string, string> = {};
-        deptData.forEach((dept) => {
-          deptMap[dept.value] = dept.label;
+        // Fetch subjects (shared groups) from service
+        const subjectData = await getSubjects(companyName);
+        const subjectMap: Record<string, string> = {};
+        subjectData.forEach((subject) => {
+          if (subject.id) {
+            subjectMap[subject.id] = subject.name;
+          }
         });
-        setDeptLabels(deptMap);
+        setDeptLabels(subjectMap);
 
         setOptions({
-          targetItems: result.targetItems,
+          targetItems: [...TARGET_ITEMS],
           energyTypes: Object.keys(energyTypeMap),
           workAreas: Object.keys(areaMap),
-          sharedGroups: Object.keys(deptMap),
-          lockedStates: result.lockedStates,
+          sharedGroups: Object.keys(subjectMap),
+          lockedStates: ["鎖定", "未鎖定"],
         });
       } catch (error) {
         console.error("Error fetching options:", error);
+        // Set default values if fetch fails
+        setOptions({
+          targetItems: [...TARGET_ITEMS],
+          energyTypes: [],
+          workAreas: [],
+          sharedGroups: [],
+          lockedStates: ["鎖定", "未鎖定"],
+        });
       }
     };
 
-    if (open) {
+    if (open && companyName) {
       fetchOptions();
     }
-  }, [open]);
+  }, [open, companyName]);
 
   useEffect(() => {
     if (open && initialData) {
@@ -186,6 +207,11 @@ export function BaselineDialog({
         X3State: false,
         X4State: false,
         X5State: false,
+        X1Unit: "",
+        X2Unit: "",
+        X3Unit: "",
+        X4Unit: "",
+        X5Unit: "",
       });
       setError(null);
     }
@@ -193,16 +219,75 @@ export function BaselineDialog({
 
   const handleSubmit = async () => {
     try {
+      // Log the submission attempt
+      console.log("=== Submitting Baseline Form ===");
+      console.log("Company:", companyName);
+      console.log("Form Data:", formData);
+
       // Validate required fields
       if (!formData.baselineCode || !formData.targetItem || !formData.locked) {
         setError("請填寫必要欄位：基線代碼、標的選項、狀態");
         return;
       }
 
+      // Validate conditional required fields based on target item
+      if (
+        formData.targetItem === "能源分類" &&
+        formData.energyType === "(未設定)"
+      ) {
+        setError("能源分類需要選擇能源類型");
+        return;
+      }
+      if (
+        formData.targetItem === "設備群組" &&
+        formData.sharedGroup === "(未設定)"
+      ) {
+        setError("設備群組需要選擇共用群組");
+        return;
+      }
+      if (
+        formData.targetItem === "工作場域" &&
+        formData.workArea === "(未設定)"
+      ) {
+        setError("工作場域需要選擇工作區域");
+        return;
+      }
+
+      // Validate X variables
+      if (formData.X1State && !formData.X1) {
+        setError("X1 變數已啟用但未填寫名稱");
+        return;
+      }
+      if (formData.X2State && !formData.X2) {
+        setError("X2 變數已啟用但未填寫名稱");
+        return;
+      }
+      if (formData.X3State && !formData.X3) {
+        setError("X3 變數已啟用但未填寫名稱");
+        return;
+      }
+      if (formData.X4State && !formData.X4) {
+        setError("X4 變數已啟用但未填寫名稱");
+        return;
+      }
+      if (formData.X5State && !formData.X5) {
+        setError("X5 變數已啟用但未填寫名稱");
+        return;
+      }
+
+      // Log before API call
+      console.log("=== Calling API ===");
+      console.log("Endpoint: /api/enb");
+      console.log("Method: POST");
+      console.log("Query params:", { company: companyName });
+
       await onSubmit(formData);
+      console.log("=== API Call Successful ===");
       onOpenChange(false);
       setError(null);
     } catch (err) {
+      console.error("=== API Call Failed ===");
+      console.error("Error:", err);
       setError(err instanceof Error ? err.message : "發生未知錯誤");
     }
   };
@@ -411,19 +496,32 @@ export function BaselineDialog({
                     ...formData,
                     X1State: checked,
                     X1: checked ? "" : "未使用",
+                    X1Unit: checked ? formData.X1Unit : "",
                   })
                 }
               />
-              <Input
-                id="X1"
-                value={formData.X1}
-                onChange={(e) =>
-                  setFormData({ ...formData, X1: e.target.value })
-                }
-                className="flex-1"
-                disabled={!formData.X1State}
-                placeholder="未使用"
-              />
+              <div className="flex-1 flex gap-2">
+                <Input
+                  id="X1"
+                  value={formData.X1}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X1: e.target.value })
+                  }
+                  className="flex-1"
+                  disabled={!formData.X1State}
+                  placeholder="未使用"
+                />
+                <Input
+                  id="X1Unit"
+                  value={formData.X1Unit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X1Unit: e.target.value })
+                  }
+                  className="w-[120px]"
+                  disabled={!formData.X1State}
+                  placeholder="單位"
+                />
+              </div>
             </div>
           </div>
 
@@ -439,19 +537,32 @@ export function BaselineDialog({
                     ...formData,
                     X2State: checked,
                     X2: checked ? "" : "未使用",
+                    X2Unit: checked ? formData.X2Unit : "",
                   })
                 }
               />
-              <Input
-                id="X2"
-                value={formData.X2}
-                onChange={(e) =>
-                  setFormData({ ...formData, X2: e.target.value })
-                }
-                className="flex-1"
-                disabled={!formData.X2State}
-                placeholder="未使用"
-              />
+              <div className="flex-1 flex gap-2">
+                <Input
+                  id="X2"
+                  value={formData.X2}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X2: e.target.value })
+                  }
+                  className="flex-1"
+                  disabled={!formData.X2State}
+                  placeholder="未使用"
+                />
+                <Input
+                  id="X2Unit"
+                  value={formData.X2Unit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X2Unit: e.target.value })
+                  }
+                  className="w-[120px]"
+                  disabled={!formData.X2State}
+                  placeholder="單位"
+                />
+              </div>
             </div>
           </div>
 
@@ -467,19 +578,32 @@ export function BaselineDialog({
                     ...formData,
                     X3State: checked,
                     X3: checked ? "" : "未使用",
+                    X3Unit: checked ? formData.X3Unit : "",
                   })
                 }
               />
-              <Input
-                id="X3"
-                value={formData.X3}
-                onChange={(e) =>
-                  setFormData({ ...formData, X3: e.target.value })
-                }
-                className="flex-1"
-                disabled={!formData.X3State}
-                placeholder="未使用"
-              />
+              <div className="flex-1 flex gap-2">
+                <Input
+                  id="X3"
+                  value={formData.X3}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X3: e.target.value })
+                  }
+                  className="flex-1"
+                  disabled={!formData.X3State}
+                  placeholder="未使用"
+                />
+                <Input
+                  id="X3Unit"
+                  value={formData.X3Unit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X3Unit: e.target.value })
+                  }
+                  className="w-[120px]"
+                  disabled={!formData.X3State}
+                  placeholder="單位"
+                />
+              </div>
             </div>
           </div>
 
@@ -495,19 +619,32 @@ export function BaselineDialog({
                     ...formData,
                     X4State: checked,
                     X4: checked ? "" : "未使用",
+                    X4Unit: checked ? formData.X4Unit : "",
                   })
                 }
               />
-              <Input
-                id="X4"
-                value={formData.X4}
-                onChange={(e) =>
-                  setFormData({ ...formData, X4: e.target.value })
-                }
-                className="flex-1"
-                disabled={!formData.X4State}
-                placeholder="未使用"
-              />
+              <div className="flex-1 flex gap-2">
+                <Input
+                  id="X4"
+                  value={formData.X4}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X4: e.target.value })
+                  }
+                  className="flex-1"
+                  disabled={!formData.X4State}
+                  placeholder="未使用"
+                />
+                <Input
+                  id="X4Unit"
+                  value={formData.X4Unit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X4Unit: e.target.value })
+                  }
+                  className="w-[120px]"
+                  disabled={!formData.X4State}
+                  placeholder="單位"
+                />
+              </div>
             </div>
           </div>
 
@@ -523,19 +660,32 @@ export function BaselineDialog({
                     ...formData,
                     X5State: checked,
                     X5: checked ? "" : "未使用",
+                    X5Unit: checked ? formData.X5Unit : "",
                   })
                 }
               />
-              <Input
-                id="X5"
-                value={formData.X5}
-                onChange={(e) =>
-                  setFormData({ ...formData, X5: e.target.value })
-                }
-                className="flex-1"
-                disabled={!formData.X5State}
-                placeholder="未使用"
-              />
+              <div className="flex-1 flex gap-2">
+                <Input
+                  id="X5"
+                  value={formData.X5}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X5: e.target.value })
+                  }
+                  className="flex-1"
+                  disabled={!formData.X5State}
+                  placeholder="未使用"
+                />
+                <Input
+                  id="X5Unit"
+                  value={formData.X5Unit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, X5Unit: e.target.value })
+                  }
+                  className="w-[120px]"
+                  disabled={!formData.X5State}
+                  placeholder="單位"
+                />
+              </div>
             </div>
           </div>
         </div>

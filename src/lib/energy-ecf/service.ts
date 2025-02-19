@@ -1,12 +1,16 @@
 import type { ECF } from "./types";
 
-class EnergyECFService {
-  async getECFs(): Promise<ECF[]> {
-    const response = await fetch("/api/energy-ecf");
-    if (!response.ok) throw new Error("Failed to fetch ECFs");
-    const data = await response.json();
-    return data.ecfs;
+export async function getECFs(company: string): Promise<ECF[]> {
+  if (!company) {
+    return [];
   }
-}
 
-export const energyECFService = new EnergyECFService();
+  const response = await fetch(`/api/energy-ecf?company=${company}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch ECFs");
+  }
+
+  return data.ecfs;
+}

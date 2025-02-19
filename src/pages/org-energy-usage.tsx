@@ -6,7 +6,8 @@ import { DataGrid } from "../components/DataGrid";
 import Tooltip from "@mui/material/Tooltip";
 import { DetailDialog, type Field } from "../components/dialogs/DetailDialog";
 import type { ECF } from "@/lib/energy-ecf/types";
-import { energyECFService } from "@/lib/energy-ecf/service";
+import { getECFs } from "@/lib/energy-ecf/service";
+import { useCompany } from "@/contexts/CompanyContext";
 import {
   Dialog,
   DialogContent,
@@ -72,16 +73,21 @@ export default function OrgEnergyUsage() {
   const [editingRecord, setEditingRecord] = useState<EnergyUsage | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<EnergyUsage | null>(null);
   const [ecfs, setEcfs] = useState<ECF[]>([]);
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
         // Load ECFs
-        const ecfData = await energyECFService.getECFs();
+        const ecfData = await getECFs(companyName);
         setEcfs(ecfData);
 
         // Load records
-        const recordsResponse = await fetch("/api/org-energy-usage");
+        const recordsResponse = await fetch(
+          `/api/org-energy-usage?company=${companyName}`
+        );
         const recordsData = await recordsResponse.json();
         setRecords(recordsData.records);
       } catch (error) {
@@ -90,7 +96,7 @@ export default function OrgEnergyUsage() {
     };
 
     loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   const fields: Field[] = [
     {
@@ -118,17 +124,13 @@ export default function OrgEnergyUsage() {
       onChange: (value: string) => {
         const selectedEcf = ecfs.find((ecf) => ecf.name === value);
         if (selectedEcf) {
-          setEditingRecord((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  categoryName: selectedEcf.name,
-                  categoryCode: selectedEcf.code,
-                  unit: selectedEcf.unit,
-                }
-              : undefined
-          );
+          return {
+            categoryName: selectedEcf.name,
+            categoryCode: selectedEcf.code,
+            unit: selectedEcf.unit,
+          };
         }
+        return {};
       },
     },
     {
@@ -285,19 +287,25 @@ export default function OrgEnergyUsage() {
   ];
 
   const handleAdd = () => {
-    // Find default ECF (e.g., first in the list)
+    // Ensure ECFs are loaded
+    if (!ecfs.length) {
+      console.error("No ECFs loaded");
+      return;
+    }
+
+    // Find default ECF (first in the list)
     const defaultEcf = ecfs[0];
     const today = new Date().toISOString().split("T")[0];
 
-    // For new records, we set initial values but don't set an ID
+    // Set initial values with the default ECF
     const initialData = {
       name: "",
-      categoryCode: defaultEcf?.code || "",
-      categoryName: defaultEcf?.name || "",
+      categoryCode: defaultEcf.code,
+      categoryName: defaultEcf.name,
       startDate: today,
       endDate: today,
       usage: 0,
-      unit: defaultEcf?.unit || "",
+      unit: defaultEcf.unit,
       meterNumber: "",
       note: "",
     };
@@ -307,6 +315,11 @@ export default function OrgEnergyUsage() {
   };
 
   const handleEdit = (row: EnergyUsage) => {
+    console.log("Editing record:", row);
+    if (!row.id) {
+      console.error("Cannot edit record without ID");
+      return;
+    }
     setEditingRecord(row);
     setDialogOpen(true);
   };
@@ -318,47 +331,64 @@ export default function OrgEnergyUsage() {
   const handleSubmit = async (data: Omit<EnergyUsage, "id">) => {
     // Find the matching ECF to get all ECF data
     const selectedEcf = ecfs.find((ecf) => ecf.code === data.categoryCode);
-    const submissionData = {
-      ...data,
-      categoryName: selectedEcf?.name || "",
-      unit: selectedEcf?.unit || "",
-    };
 
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
-      if (editingRecord && "id" in editingRecord) {
-        // Update existing record
-        const updatedRecord = {
-          ...submissionData,
-          id: editingRecord.id,
-        };
-        setRecords((prev) =>
-          prev.map((record) =>
-            record.id === editingRecord.id ? updatedRecord : record
-          )
-        );
-      } else {
-        // Create new record with a temporary ID
-        const newRecord = {
-          ...submissionData,
-          id: `temp_${Date.now()}`,
-        };
-        setRecords((prev) => [...prev, newRecord]);
+      const submissionData = {
+        ...data,
+        categoryName: selectedEcf?.name || "",
+        unit: selectedEcf?.unit || "",
+      };
+
+      const isEditing = Boolean(editingRecord?.id);
+      const requestBody =
+        isEditing && editingRecord
+          ? {
+              ...submissionData,
+              id: editingRecord.id,
+            }
+          : submissionData;
+
+      const response = await fetch(
+        `/api/org-energy-usage?company=${companyName}`,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to save record");
       }
 
+      setRecords(result.records);
       setDialogOpen(false);
       setEditingRecord(undefined);
     } catch (error) {
-      console.error("Failed to save record:", error);
+      console.error("Error in handleSubmit:", error);
     }
   };
 
   const handleDeleteConfirmed = async (record: EnergyUsage) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setRecords((prev) => prev.filter((r) => r.id !== record.id));
+      const response = await fetch(
+        `/api/org-energy-usage?company=${companyName}&id=${record.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete record");
+      }
+
+      setRecords(result.records);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete record:", error);

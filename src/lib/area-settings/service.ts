@@ -1,12 +1,16 @@
 import type { Area } from "./types";
 
-class AreaSettingsService {
-  async getAreas(): Promise<Area[]> {
-    const response = await fetch(`/api/area-settings`);
-    if (!response.ok) throw new Error("Failed to fetch areas");
-    const data = await response.json();
-    return data.areas;
+export async function getAreas(company: string): Promise<Area[]> {
+  if (!company) {
+    return [];
   }
-}
 
-export const areaSettingsService = new AreaSettingsService();
+  const response = await fetch(`/api/area-settings?company=${company}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch areas");
+  }
+
+  return data.areas;
+}

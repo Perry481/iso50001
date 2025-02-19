@@ -48,6 +48,7 @@ interface DetailDialogProps<T extends { id?: string | number }> {
   description: string;
   fields: Field[];
   showDeviceReference?: boolean;
+  onDateValidation?: (date: string) => boolean;
 }
 
 type FormDataType = Record<string, string | number>;
@@ -62,6 +63,7 @@ export function DetailDialog<T extends { id?: string | number }>({
   description,
   fields,
   showDeviceReference = false,
+  onDateValidation,
 }: DetailDialogProps<T>) {
   const [formData, setFormData] = useState<FormDataType>({});
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,15 @@ export function DetailDialog<T extends { id?: string | number }>({
     };
 
   const handleDateChange = (key: string) => (value: string) => {
+    // Check for date validation if the handler exists
+    if (key === "date" && onDateValidation) {
+      const isDuplicate = onDateValidation(value);
+      if (isDuplicate) {
+        alert("此期別已存在，請選擇其他日期");
+        return;
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       [key]: value,

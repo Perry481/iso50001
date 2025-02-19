@@ -19,6 +19,9 @@ interface ListingPageProps<T extends BaseItem> {
   onAddItem: () => void;
   addButtonText?: string;
   renderItemContent?: (item: T) => React.ReactNode;
+  noDelete?: boolean;
+  noEdit?: boolean;
+  noAdd?: boolean;
 }
 
 export function ListingPage<T extends BaseItem>({
@@ -33,6 +36,9 @@ export function ListingPage<T extends BaseItem>({
   onAddItem,
   addButtonText = "新增",
   renderItemContent,
+  noDelete,
+  noEdit,
+  noAdd,
 }: ListingPageProps<T>) {
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -83,12 +89,14 @@ export function ListingPage<T extends BaseItem>({
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button
-          className="bg-green-500 hover:bg-green-600 text-white"
-          onClick={onAddItem}
-        >
-          <Plus className="h-4 w-4 mr-2" /> {addButtonText}
-        </Button>
+        {!noAdd && (
+          <Button
+            className="bg-green-500 hover:bg-green-600 text-white"
+            onClick={onAddItem}
+          >
+            <Plus className="h-4 w-4 mr-2" /> {addButtonText}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -106,28 +114,32 @@ export function ListingPage<T extends BaseItem>({
             <div className="flex justify-between items-center">
               <div className="space-y-1">{actualRenderItemContent(item)}</div>
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-blue-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditItem(item);
-                  }}
-                >
-                  <Pencil className="h-4 w-4 text-blue-500" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-red-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteItem(item);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
+                {!noEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-blue-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditItem(item);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                  </Button>
+                )}
+                {!noDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-red-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem(item);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>

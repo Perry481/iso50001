@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import ReactECharts from "echarts-for-react";
 import { StateGrid } from "@/components/StateGrid";
+import { useCompany } from "../contexts/CompanyContext";
 
 type FilterType = "共用設備群組" | "工作場域管理" | "能源類別";
 
@@ -46,6 +47,8 @@ interface SEUStateData {
   percentage: number;
   IsSEU: boolean;
   status?: string;
+  EceSgt?: number;
+  groupId?: string;
 }
 
 interface SEUGroupData {
@@ -54,6 +57,7 @@ interface SEUGroupData {
   percentage: number;
   IsSEU: boolean;
   status?: string;
+  groupId?: string;
 }
 
 interface TooltipParam {
@@ -75,6 +79,9 @@ export default function SEU() {
   const [filterType, setFilterType] = useState<FilterType>("共用設備群組");
   const [energyConsumption, setEnergyConsumption] = useState<EnergyData[]>([]);
   const [energyEmission, setEnergyEmission] = useState<EnergyData[]>([]);
+  const [equipmentConsumption, setEquipmentConsumption] = useState<
+    EnergyData[]
+  >([]);
   const [seuEquipmentData, setSeuEquipmentData] = useState<SEUEquipmentData[]>(
     []
   );
@@ -82,6 +89,7 @@ export default function SEU() {
   const [seuStateData, setSeuStateData] = useState<SEUStateData[]>([]);
   const [seuGroupData, setSEUGroupData] = useState<SEUGroupData[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const { companyName, isSchemaInitialized } = useCompany();
 
   // Add refs for chart instances
   const equipmentChartRef = React.useRef<ReactECharts>(null);
@@ -89,8 +97,10 @@ export default function SEU() {
 
   useEffect(() => {
     const loadReports = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const response = await fetch("/api/seu");
+        const response = await fetch(`/api/seu?company=${companyName}`);
         const data = await response.json();
         setReports(data.reports);
       } catch (error) {
@@ -99,7 +109,7 @@ export default function SEU() {
     };
 
     void loadReports();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   // Map filter type to category type
   const getCategoryType = (filter: FilterType): string => {
@@ -119,11 +129,12 @@ export default function SEU() {
     async (eeSgt: number, categoryType: string) => {
       try {
         const response = await fetch(
-          `/api/seu?type=energy&eeSgt=${eeSgt}&categoryType=${categoryType}`
+          `/api/seu?type=energy&eeSgt=${eeSgt}&categoryType=${categoryType}&company=${companyName}`
         );
         const data = await response.json();
         setEnergyConsumption(data.energyConsumption || []);
         setEnergyEmission(data.energyEmission || []);
+        setEquipmentConsumption(data.equipmentConsumption || []);
         setSeuEquipmentData(data.seuEquipmentData || []);
         setMonthlyData(data.monthlyData || []);
         setSeuStateData(data.seuStateData || []);
@@ -132,14 +143,20 @@ export default function SEU() {
         console.error("Error loading energy data:", error);
       }
     },
-    []
+    [companyName]
   );
 
   useEffect(() => {
-    if (!showReportList && selectedReport?.eeSgt) {
+    if (!showReportList && selectedReport?.eeSgt && isSchemaInitialized) {
       void loadEnergyData(selectedReport.eeSgt, getCategoryType(filterType));
     }
-  }, [showReportList, selectedReport, loadEnergyData, filterType]);
+  }, [
+    showReportList,
+    selectedReport,
+    loadEnergyData,
+    filterType,
+    isSchemaInitialized,
+  ]);
 
   const handleAddReport = () => {
     setEditingReport(undefined);
@@ -162,28 +179,21 @@ export default function SEU() {
 
   const handleReportSubmit = async (data: Report) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
-      if (editingReport) {
-        // Update existing report
-        const updatedReport = {
-          ...data,
-          id: editingReport.id,
-        };
-        setReports((prev) =>
-          prev.map((report) =>
-            report.id === editingReport.id ? updatedReport : report
-          )
-        );
-      } else {
-        // Create new report with a temporary ID
-        const newReport = {
-          ...data,
-          id: `temp_${Date.now()}`,
-        };
-        setReports((prev) => [...prev, newReport]);
+      const method = editingReport ? "PUT" : "POST";
+      const response = await fetch(`/api/seu?company=${companyName}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save report");
       }
 
+      const result = await response.json();
+      setReports(result.reports);
       setReportDialogOpen(false);
       setEditingReport(undefined);
     } catch (error) {
@@ -193,18 +203,26 @@ export default function SEU() {
 
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setReports((prev) => {
-        const newReports = prev.filter((item) => item.id !== report.id);
-        // Calculate if we need to adjust the current page
-        const totalPages = Math.max(1, Math.ceil(newReports.length / 4)); // 4 is itemsPerPage
-        if (currentPage > totalPages) {
-          setCurrentPage(totalPages);
+      const response = await fetch(
+        `/api/seu?company=${companyName}&eeSgt=${report.eeSgt}`,
+        {
+          method: "DELETE",
         }
-        return newReports;
-      });
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete report");
+      }
+
+      const result = await response.json();
+      setReports(result.reports);
       setDeleteReportConfirm(null);
+
+      // Update current page if needed
+      const totalPages = Math.max(1, Math.ceil(result.reports.length / 4));
+      if (currentPage > totalPages) {
+        setCurrentPage(totalPages);
+      }
     } catch (error) {
       console.error("Failed to delete report:", error);
     }
@@ -300,17 +318,26 @@ export default function SEU() {
     ],
   };
 
+  const getChartTitle = (filter: FilterType): string => {
+    switch (filter) {
+      case "共用設備群組":
+        return "共用設備群組用電當量(kWh)";
+      case "工作場域管理":
+        return "工作場域用電當量(kWh)";
+      case "能源類別":
+        return "能源類別用電當量(kWh)";
+      default:
+        return "用電當量(kWh)";
+    }
+  };
+
   const equipmentChartOption = {
     title: {
-      text: "場域群組用電當量(kWh)",
+      text: getChartTitle(filterType),
       left: "center",
     },
     legend: {
-      top: 25,
-      data: ["SEU設備", "一般設備"],
-      textStyle: {
-        fontSize: 12,
-      },
+      show: false,
     },
     tooltip: {
       trigger: "axis",
@@ -325,19 +352,10 @@ export default function SEU() {
           seriesName: string;
         }[]
       ) {
-        const seuValue =
-          params.find((param) => param.seriesName === "SEU設備")?.value || 0;
-        const nonSeuValue =
-          params.find((param) => param.seriesName === "一般設備")?.value || 0;
-        const totalValue = seuValue + nonSeuValue;
-        const isSeu = seuValue > 0;
-        const barColor = isSeu ? "#91CC75" : "#6B7ED9";
-
-        let result = `<div style="font-weight: bold">${params[0].name} (${
-          isSeu ? "已" : "未"
-        }列入SEU)</div>`;
-        result += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${barColor};"></span>用電當量(kWh): ${totalValue.toLocaleString()} kW`;
-        return result;
+        const value = params[0].value;
+        return `<div style="font-weight: bold">${params[0].name}</div>${
+          params[0].marker
+        }用電當量(kWh): ${value.toLocaleString()} kW`;
       },
     },
     grid: {
@@ -365,7 +383,9 @@ export default function SEU() {
     ],
     xAxis: {
       type: "category",
-      data: seuGroupData.map((item) => item.groupName),
+      data: [...equipmentConsumption]
+        .sort((a, b) => b.value - a.value)
+        .map((item) => item.name),
       axisLabel: {
         interval: 0,
         rotate: 30,
@@ -380,22 +400,13 @@ export default function SEU() {
     },
     series: [
       {
-        name: "SEU設備",
         type: "bar",
-        data: seuGroupData.map((item) => (item.IsSEU ? item.KW : 0)),
-        itemStyle: {
-          color: "#91CC75",
-        },
-        stack: "total",
-      },
-      {
-        name: "一般設備",
-        type: "bar",
-        data: seuGroupData.map((item) => (!item.IsSEU ? item.KW : 0)),
+        data: [...equipmentConsumption]
+          .sort((a, b) => b.value - a.value)
+          .map((item) => item.value),
         itemStyle: {
           color: "#6B7ED9",
         },
-        stack: "total",
       },
     ],
   };
@@ -641,25 +652,87 @@ export default function SEU() {
         : [],
   };
 
-  const handleStateChange = useCallback((row: SEUStateData) => {
-    setSeuStateData((prev) =>
-      prev.map((item) =>
-        item.equipmentName === row.equipmentName
-          ? { ...item, status: item.status === "取消" ? undefined : "取消" }
-          : item
-      )
-    );
-  }, []);
+  const handleStateChange = useCallback(
+    async (row: SEUStateData) => {
+      try {
+        if (!row.EceSgt) {
+          return;
+        }
 
-  const handleGroupStateChange = useCallback((row: SEUStateData) => {
-    setSEUGroupData((prev) =>
-      prev.map((item) =>
-        item.groupName === row.equipmentName
-          ? { ...item, status: item.status === "取消" ? undefined : "取消" }
-          : item
-      )
-    );
-  }, []);
+        const selecttype = !row.IsSEU ? "isseu" : "removeseu";
+        const response = await fetch(
+          `https://esg.jtmes.net/OptonSetup/GetEnergyMachineList.ashx?selecttype=${selecttype}&EceSgt=${row.EceSgt}&schema=${companyName}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to update SEU status");
+        }
+
+        setSeuStateData((prev) =>
+          prev.map((item) =>
+            item.EceSgt === row.EceSgt
+              ? {
+                  ...item,
+                  IsSEU: !item.IsSEU,
+                  status: !item.IsSEU ? undefined : "取消",
+                }
+              : item
+          )
+        );
+
+        if (selectedReport?.eeSgt) {
+          void loadEnergyData(
+            selectedReport.eeSgt,
+            getCategoryType(filterType)
+          );
+        }
+      } catch (error) {
+        console.error("Failed to update equipment SEU status:", error);
+      }
+    },
+    [companyName, selectedReport?.eeSgt, filterType, loadEnergyData]
+  );
+
+  const handleGroupStateChange = useCallback(
+    async (row: SEUStateData) => {
+      try {
+        if (!row.groupId) {
+          return;
+        }
+
+        const selecttype = !row.IsSEU ? "isseu" : "removeseu";
+        const response = await fetch(
+          `https://esg.jtmes.net/OptonSetup/GetEnergyGroupList.ashx?selecttype=${selecttype}&EnergyGroupID=${row.groupId}&schema=${companyName}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to update group SEU status");
+        }
+
+        setSEUGroupData((prev) =>
+          prev.map((item) =>
+            item.groupId === row.groupId
+              ? {
+                  ...item,
+                  IsSEU: !item.IsSEU,
+                  status: !item.IsSEU ? undefined : "取消",
+                }
+              : item
+          )
+        );
+
+        if (selectedReport?.eeSgt) {
+          void loadEnergyData(
+            selectedReport.eeSgt,
+            getCategoryType(filterType)
+          );
+        }
+      } catch (error) {
+        console.error("Failed to update group SEU status:", error);
+      }
+    },
+    [companyName, selectedReport?.eeSgt, filterType, loadEnergyData]
+  );
 
   // Clear chart data and reload when filter type changes
   const handleFilterTypeChange = (value: FilterType) => {
@@ -675,6 +748,7 @@ export default function SEU() {
     setMonthlyData([]);
     setEnergyConsumption([]);
     setEnergyEmission([]);
+    setEquipmentConsumption([]);
     setSeuEquipmentData([]);
     setSeuStateData([]);
     setSEUGroupData([]);
@@ -698,6 +772,9 @@ export default function SEU() {
           onDeleteItem={handleDeleteReport}
           addButtonText="新增報告"
           renderItemContent={renderReportContent}
+          noAdd={true}
+          noEdit={true}
+          noDelete={true}
         />
       ) : (
         <>
@@ -767,6 +844,7 @@ export default function SEU() {
                     percentage: item.percentage,
                     IsSEU: item.IsSEU,
                     status: item.status,
+                    EceSgt: item.EceSgt,
                   }))}
                   title="設備能耗狀態"
                   onStateChange={handleStateChange}
@@ -778,6 +856,7 @@ export default function SEU() {
                     percentage: item.percentage,
                     IsSEU: item.IsSEU,
                     status: item.status,
+                    groupId: item.groupId,
                   }))}
                   title="群組能耗狀態"
                   nameHeader="群組名稱"

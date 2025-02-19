@@ -15,16 +15,21 @@ import {
 import { Button } from "../components/ui/button";
 import type { Equipment } from "./api/energy-equipment";
 import { EQUIPMENT_TYPE_OPTIONS, STATUS_OPTIONS } from "./api/energy-equipment";
-import { WORK_AREA_OPTIONS } from "@/lib/area-settings/types";
 import { deptListService } from "@/lib/dept-list/service";
 import type { Dept } from "@/lib/dept-list/types";
-import { energySubjectService } from "@/lib/energy-subject/service";
-import { energyECFService } from "@/lib/energy-ecf/service";
+import { getSubjects } from "@/lib/energy-subject/service";
+import type { EnergySubject } from "@/lib/energy-subject/types";
+import { getECFs } from "@/lib/energy-ecf/service";
 import type { ECF } from "@/lib/energy-ecf/types";
+import { useCompany } from "../contexts/CompanyContext";
+import { getAreas } from "@/lib/area-settings/service";
+import type { Area } from "@/lib/area-settings/types";
 
 interface SelectOption {
   value: string;
   label: string;
+  code?: string;
+  name?: string;
 }
 
 const tooltipProps = {
@@ -76,34 +81,45 @@ export default function EnergyEquipment() {
     []
   );
   const [manufacturerOptions, setManufacturerOptions] = useState<ECF[]>([]);
+  const [workAreaOptions, setWorkAreaOptions] = useState<Area[]>([]);
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const response = await fetch("/api/energy-equipment");
+        const response = await fetch(
+          `/api/energy-equipment?company=${companyName}`
+        );
         const data = await response.json();
         setEquipments(data.equipments);
 
         const depts = await deptListService.getDepts();
         setDepartmentOptions(depts);
 
-        const ecfs = await energyECFService.getECFs();
+        const ecfs = await getECFs(companyName);
         setManufacturerOptions(ecfs);
+
+        const areas = await getAreas(companyName);
+        setWorkAreaOptions(areas);
       } catch (error) {
         console.error("Failed to load data:", error);
       }
     };
 
     loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   useEffect(() => {
     const loadUsageGroups = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const subjects = await energySubjectService.getSubjects();
-        const options = subjects.map((subject) => ({
-          value: subject.EnergyGroupName,
-          label: subject.EnergyGroupName,
+        const subjects = await getSubjects(companyName);
+        const options = subjects.map((subject: EnergySubject) => ({
+          value: subject.code,
+          label: subject.name,
         }));
         setUsageGroupOptions(options);
       } catch (error) {
@@ -112,7 +128,7 @@ export default function EnergyEquipment() {
     };
 
     loadUsageGroups();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   const fields: Field[] = [
     {
@@ -138,11 +154,11 @@ export default function EnergyEquipment() {
       type: "select",
       required: true,
       options: manufacturerOptions.map((ecf) => ({
-        value: ecf.name,
+        value: ecf.code,
         label: `${ecf.name} (${ecf.code})`,
       })),
       onChange: (value: string): Record<string, string | number> => {
-        const ecf = manufacturerOptions.find((e) => e.name === value);
+        const ecf = manufacturerOptions.find((e) => e.code === value);
         if (!ecf) return {};
 
         return {
@@ -163,7 +179,10 @@ export default function EnergyEquipment() {
       label: "工作場域",
       type: "select",
       required: true,
-      options: WORK_AREA_OPTIONS,
+      options: workAreaOptions.map((area) => ({
+        value: area.code,
+        label: area.name,
+      })),
     },
     {
       key: "department",
@@ -266,7 +285,7 @@ export default function EnergyEquipment() {
         ),
       },
       {
-        accessorKey: "manufacturer",
+        accessorFn: (row) => row.manufacturerName,
         header: "類別代碼",
         size: 110,
         Header: () => (
@@ -276,6 +295,7 @@ export default function EnergyEquipment() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ row }) => row.original.manufacturerName,
       },
       {
         accessorKey: "equipmentType",
@@ -288,9 +308,16 @@ export default function EnergyEquipment() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<string>();
+          const option = EQUIPMENT_TYPE_OPTIONS.find(
+            (opt) => opt.value === value
+          );
+          return option ? option.label : value;
+        },
       },
       {
-        accessorKey: "workArea",
+        accessorFn: (row) => row.workAreaName,
         header: "工作場域",
         size: 110,
         Header: () => (
@@ -300,6 +327,9 @@ export default function EnergyEquipment() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ row }) => {
+          return row.original.workAreaName;
+        },
       },
       {
         accessorKey: "department",
@@ -314,14 +344,12 @@ export default function EnergyEquipment() {
         ),
         Cell: ({ cell }) => {
           const value = cell.getValue<string>();
-          const option = departmentOptions.find(
-            (opt: Dept) => opt.value === value
-          );
+          const option = departmentOptions.find((opt) => opt.value === value);
           return option ? option.label : value;
         },
       },
       {
-        accessorKey: "usageGroup",
+        accessorFn: (row) => row.usageGroupName,
         header: "共用群組",
         size: 110,
         Header: () => (
@@ -331,6 +359,9 @@ export default function EnergyEquipment() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ row }) => {
+          return row.original.usageGroupName;
+        },
       },
       {
         accessorKey: "status",
@@ -343,6 +374,11 @@ export default function EnergyEquipment() {
             </div>
           </Tooltip>
         ),
+        Cell: ({ cell }) => {
+          const value = cell.getValue<string>();
+          const option = STATUS_OPTIONS.find((opt) => opt.value === value);
+          return option ? option.label : value;
+        },
       },
       {
         accessorKey: "ratedPower",
@@ -430,7 +466,11 @@ export default function EnergyEquipment() {
   };
 
   const handleEdit = (row: Equipment) => {
-    setEditingEquipment(row);
+    console.log("Editing equipment:", row);
+    setEditingEquipment({
+      ...row,
+      id: row.code,
+    });
     setDialogOpen(true);
   };
 
@@ -440,43 +480,93 @@ export default function EnergyEquipment() {
 
   const handleSubmit = async (data: Omit<Equipment, "id">) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
+      console.log("Form submission data:", data);
+      console.log("Work area selected:", {
+        value: data.workArea,
+        option: workAreaOptions.find((opt) => opt.code === data.workArea),
+      });
+
       if (editingEquipment && "id" in editingEquipment) {
         // Update existing equipment
-        const updatedEquipment = {
-          ...data,
-          id: editingEquipment.id,
-        };
-        setEquipments((prev) =>
-          prev.map((equipment) =>
-            equipment.id === editingEquipment.id ? updatedEquipment : equipment
-          )
+        const response = await fetch(
+          `/api/energy-equipment?company=${companyName}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...data,
+              id: editingEquipment.id,
+            }),
+          }
         );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to update equipment");
+        }
+
+        const result = await response.json();
+        setEquipments(result.equipments);
       } else {
-        // Create new equipment with a temporary ID
-        const newEquipment = {
-          ...data,
-          id: `temp_${Date.now()}`,
-        };
-        setEquipments((prev) => [...prev, newEquipment]);
+        // Create new equipment
+        const response = await fetch(
+          `/api/energy-equipment?company=${companyName}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to create equipment");
+        }
+
+        const result = await response.json();
+        setEquipments(result.equipments);
       }
 
       setDialogOpen(false);
       setEditingEquipment(undefined);
     } catch (error) {
       console.error("Failed to save equipment:", error);
+      // TODO: Show error message to user
     }
   };
 
-  const handleDeleteConfirmed = async (equipment: Equipment) => {
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm?.code) return;
+
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setEquipments((prev) => prev.filter((e) => e.id !== equipment.id));
+      console.log("Deleting equipment:", deleteConfirm);
+      const response = await fetch(
+        `/api/energy-equipment?company=${companyName}&id=${deleteConfirm.code}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Delete response status:", response.status);
+      const result = await response.json();
+      console.log("Delete response:", result);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete equipment");
+      }
+
+      setEquipments(result.equipments);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete equipment:", error);
+      // TODO: Show error message to user
     }
   };
 
@@ -528,12 +618,7 @@ export default function EnergyEquipment() {
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
               取消
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() =>
-                deleteConfirm && handleDeleteConfirmed(deleteConfirm)
-              }
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
               刪除
             </Button>
           </DialogFooter>

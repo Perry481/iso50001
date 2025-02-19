@@ -1,12 +1,18 @@
 import type { EnergySubject } from "./types";
 
-class EnergySubjectService {
-  async getSubjects(): Promise<EnergySubject[]> {
-    const response = await fetch("/api/energy-subject-settings");
-    if (!response.ok) throw new Error("Failed to fetch energy subjects");
-    const data = await response.json();
-    return data;
+export async function getSubjects(company: string): Promise<EnergySubject[]> {
+  if (!company) {
+    return [];
   }
-}
 
-export const energySubjectService = new EnergySubjectService();
+  const response = await fetch(
+    `/api/energy-subject-settings?company=${company}`
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch subjects");
+  }
+
+  return data.subjects;
+}

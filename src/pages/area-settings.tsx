@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export interface Area {
   id?: string | number;
@@ -22,6 +23,13 @@ export interface Area {
   department: string;
   meterNumber?: string;
   note?: string;
+}
+
+export interface Department {
+  id?: string;
+  departId: string;
+  departName: string;
+  engName: string;
 }
 
 const tooltipProps = {
@@ -63,22 +71,52 @@ const tooltipProps = {
 
 export default function AreaSettings() {
   const [areas, setAreas] = useState<Area[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | undefined>();
+  const [editingDepartment, setEditingDepartment] = useState<
+    Department | undefined
+  >();
   const [deleteConfirm, setDeleteConfirm] = useState<Area | null>(null);
+  const [deleteDepartmentConfirm, setDeleteDepartmentConfirm] =
+    useState<Department | null>(null);
   const [departmentOptions, setDepartmentOptions] = useState<
     { value: string; label: string }[]
   >([]);
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
         // Load areas
-        const areasResponse = await fetch("/api/area-settings");
+        const areasResponse = await fetch(
+          `/api/area-settings?company=${companyName}`
+        );
         const areasData = await areasResponse.json();
+
+        if (!areasResponse.ok) {
+          throw new Error(areasData.error || "Failed to load areas");
+        }
+
         setAreas(areasData.areas);
 
-        // Load department options using the service
+        // Load departments
+        const departmentsResponse = await fetch(
+          `/api/department?company=${companyName}`
+        );
+        const departmentsData = await departmentsResponse.json();
+
+        if (!departmentsResponse.ok) {
+          throw new Error(
+            departmentsData.error || "Failed to load departments"
+          );
+        }
+
+        setDepartments(departmentsData.departments);
+
         const depts = await deptListService.getDepts();
         setDepartmentOptions(depts);
       } catch (error) {
@@ -87,7 +125,7 @@ export default function AreaSettings() {
     };
 
     loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   const fields: Field[] = [
     {
@@ -95,6 +133,7 @@ export default function AreaSettings() {
       label: "場域編號",
       type: "text",
       required: true,
+      disabled: Boolean(editingArea?.id),
     },
     {
       key: "name",
@@ -161,10 +200,13 @@ export default function AreaSettings() {
             </div>
           </Tooltip>
         ),
-        Cell: ({ cell }) => {
-          const value = cell.getValue<string>();
-          const option = departmentOptions.find((opt) => opt.value === value);
-          return option ? option.label : value;
+        accessorFn: (row) => {
+          if (!row.department || row.department === "(未設定)")
+            return "(未設定)";
+          const dept = departmentOptions.find(
+            (d) => d.value === row.department
+          );
+          return dept?.label || row.department;
         },
       },
       {
@@ -195,6 +237,69 @@ export default function AreaSettings() {
     [departmentOptions]
   );
 
+  const departmentFields: Field[] = [
+    {
+      key: "departId",
+      label: "部門編號",
+      type: "text",
+      required: true,
+      disabled: Boolean(editingDepartment?.id),
+    },
+    {
+      key: "departName",
+      label: "部門名稱",
+      type: "text",
+      required: true,
+    },
+    {
+      key: "engName",
+      label: "英文名稱",
+      type: "text",
+    },
+  ];
+
+  const departmentColumns = useMemo<MRT_ColumnDef<Department>[]>(
+    () => [
+      {
+        accessorKey: "departId",
+        header: "部門編號",
+        size: 110,
+        Header: () => (
+          <Tooltip title="部門編號" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>部門編號</span>
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        accessorKey: "departName",
+        header: "部門名稱",
+        size: 140,
+        Header: () => (
+          <Tooltip title="部門名稱" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>部門名稱</span>
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        accessorKey: "engName",
+        header: "英文名稱",
+        size: 140,
+        Header: () => (
+          <Tooltip title="英文名稱" {...tooltipProps}>
+            <div className="Mui-TableHeadCell-Content-Wrapper MuiBox-root css-lapokc">
+              <span>英文名稱</span>
+            </div>
+          </Tooltip>
+        ),
+      },
+    ],
+    []
+  );
+
   const handleAdd = () => {
     setEditingArea({
       department: "(未設定)",
@@ -203,7 +308,10 @@ export default function AreaSettings() {
   };
 
   const handleEdit = (row: Area) => {
-    setEditingArea(row);
+    setEditingArea({
+      ...row,
+      id: row.code,
+    });
     setDialogOpen(true);
   };
 
@@ -213,26 +321,32 @@ export default function AreaSettings() {
 
   const handleSubmit = async (data: Omit<Area, "id">) => {
     try {
-      // TODO: Implement actual API call for create/update
-      // For now, mock the API response with local state updates
-      if (editingArea && "id" in editingArea) {
-        // Update existing area
-        const updatedArea = {
-          ...data,
-          id: editingArea.id,
-        };
-        setAreas((prev) =>
-          prev.map((area) => (area.id === editingArea.id ? updatedArea : area))
-        );
-      } else {
-        // Create new area with a temporary ID
-        const newArea = {
-          ...data,
-          id: `temp_${Date.now()}`,
-        };
-        setAreas((prev) => [...prev, newArea]);
+      const isEditing = Boolean(editingArea?.id);
+      const requestBody = isEditing
+        ? {
+            ...data,
+            id: editingArea!.id,
+          }
+        : data;
+
+      const response = await fetch(
+        `/api/area-settings?company=${companyName}`,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to save area");
       }
 
+      setAreas(result.areas);
       setDialogOpen(false);
       setEditingArea(undefined);
     } catch (error) {
@@ -242,24 +356,127 @@ export default function AreaSettings() {
 
   const handleDeleteConfirmed = async (area: Area) => {
     try {
-      // TODO: Implement actual API call for deletion
-      // For now, just update the UI state
-      setAreas((prev) => prev.filter((a) => a.id !== area.id));
+      const response = await fetch(
+        `/api/area-settings?company=${companyName}&id=${area.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete area");
+      }
+
+      setAreas(result.areas);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete area:", error);
     }
   };
 
+  const handleAddDepartment = () => {
+    setEditingDepartment({} as Department);
+    setDepartmentDialogOpen(true);
+  };
+
+  const handleEditDepartment = (row: Department) => {
+    setEditingDepartment({
+      ...row,
+      id: row.departId,
+    });
+    setDepartmentDialogOpen(true);
+  };
+
+  const handleDeleteDepartment = (row: Department) => {
+    setDeleteDepartmentConfirm(row);
+  };
+
+  const handleSubmitDepartment = async (data: Omit<Department, "id">) => {
+    try {
+      const isEditing = Boolean(editingDepartment?.id);
+      const requestBody = isEditing
+        ? {
+            ...data,
+            id: editingDepartment!.id,
+          }
+        : data;
+
+      const response = await fetch(`/api/department?company=${companyName}`, {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to save department");
+      }
+
+      setDepartments(result.departments);
+      setDepartmentDialogOpen(false);
+      setEditingDepartment(undefined);
+    } catch (error) {
+      console.error("Failed to save department:", error);
+    }
+  };
+
+  const handleDeleteDepartmentConfirmed = async (department: Department) => {
+    try {
+      const response = await fetch(
+        `/api/department?company=${companyName}&id=${department.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete department");
+      }
+
+      setDepartments(result.departments);
+      setDeleteDepartmentConfirm(null);
+    } catch (error) {
+      console.error("Failed to delete department:", error);
+    }
+  };
+
   return (
-    <div className="p-2 space-y-2">
+    <div className="p-2 space-y-8">
+      {departmentOptions.length > 0 && (
+        <DataGrid
+          title="工作場域管理"
+          data={areas}
+          columns={columns}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          initialState={{
+            pagination: {
+              pageSize: 5,
+            },
+          }}
+        />
+      )}
+
       <DataGrid
-        title="工作場域管理"
-        data={areas}
-        columns={columns}
-        onAdd={handleAdd}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        title="部門管理"
+        data={departments}
+        columns={departmentColumns}
+        onAdd={handleAddDepartment}
+        onEdit={handleEditDepartment}
+        onDelete={handleDeleteDepartment}
+        initialState={{
+          pagination: {
+            pageSize: 5,
+          },
+        }}
       />
 
       <DetailDialog<Area>
@@ -273,7 +490,17 @@ export default function AreaSettings() {
         fields={fields}
       />
 
-      {/* Delete Confirmation Dialog */}
+      <DetailDialog<Department>
+        open={departmentDialogOpen}
+        onOpenChange={setDepartmentDialogOpen}
+        onSubmit={handleSubmitDepartment}
+        initialData={editingDepartment}
+        mode={editingDepartment ? "edit" : "create"}
+        title="部門"
+        description="部門"
+        fields={departmentFields}
+      />
+
       <Dialog
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
@@ -295,6 +522,40 @@ export default function AreaSettings() {
               variant="destructive"
               onClick={() =>
                 deleteConfirm && handleDeleteConfirmed(deleteConfirm)
+              }
+            >
+              刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteDepartmentConfirm}
+        onOpenChange={() => setDeleteDepartmentConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除部門</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600 text-center">
+            您確定要刪除部門 &ldquo;{deleteDepartmentConfirm?.departName}
+            &rdquo;？
+            <br />
+            此操作無法復原。
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDepartmentConfirm(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteDepartmentConfirm &&
+                handleDeleteDepartmentConfirmed(deleteDepartmentConfirm)
               }
             >
               刪除

@@ -16,12 +16,15 @@ import {
 } from "../ui/select";
 import { useState, useEffect } from "react";
 import { DatePicker } from "../ui/date-picker";
-import { energyECFService } from "@/lib/energy-ecf/service";
+import { getECFs } from "@/lib/energy-ecf/service";
+import { getBaselineList } from "@/lib/energy-enb/service";
 import type { ECF } from "@/lib/energy-ecf/types";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export interface EnpiFormData {
   title: string;
-  baselineCode: string;
+  baselineName: string;
+  ebSgt: string;
   energyType: {
     id: string;
     name: string;
@@ -29,7 +32,7 @@ export interface EnpiFormData {
   };
   unit: string;
   startDate: string;
-  frequency: "月" | "週";
+  frequency: "月" | "週" | "日" | "季";
   dataType: string;
   remark?: string | null;
 }
@@ -51,7 +54,8 @@ export function EnpiDialog({
 }: EnpiDialogProps) {
   const [formData, setFormData] = useState<EnpiFormData>({
     title: "",
-    baselineCode: "",
+    baselineName: "",
+    ebSgt: "",
     energyType: {
       id: "",
       name: "(未設定)",
@@ -65,27 +69,43 @@ export function EnpiDialog({
   });
 
   const [energyTypes, setEnergyTypes] = useState<ECF[]>([]);
-  const [frequencies] = useState<string[]>(["月", "週"]);
+  const [baselineList, setBaselineList] = useState<Record<string, string>>({});
+  const [frequencies] = useState<string[]>(["月", "週", "日", "季"]);
   const [dataTypes] = useState<string[]>(["單一量測", "比率分析"]);
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const fetchOptions = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
-        const ecfs = await energyECFService.getECFs();
+        const [ecfs, baselineListData] = await Promise.all([
+          getECFs(companyName),
+          getBaselineList(companyName),
+        ]);
+
         setEnergyTypes(ecfs);
+        setBaselineList(baselineListData);
       } catch (error) {
         console.error("Failed to load options:", error);
       }
     };
 
     void fetchOptions();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   useEffect(() => {
     if (open) {
+      const ebSgt = initialData?.baselineName
+        ? Object.entries(baselineList).find(
+            ([, name]) => name === initialData.baselineName
+          )?.[0] || ""
+        : "";
+
       setFormData({
         title: initialData?.title || "",
-        baselineCode: initialData?.baselineCode || "",
+        baselineName: initialData?.baselineName || "",
+        ebSgt,
         energyType: initialData?.energyType || {
           id: "",
           name: "(未設定)",
@@ -98,7 +118,7 @@ export function EnpiDialog({
         remark: initialData?.remark || null,
       });
     }
-  }, [open, initialData]);
+  }, [open, initialData, baselineList]);
 
   const handleSubmit = () => {
     onSubmit(formData);
@@ -117,6 +137,23 @@ export function EnpiDialog({
         unit: selectedType.unit,
       });
     }
+  };
+
+  const handleBaselineChange = (baselineCode: string) => {
+    console.log("Selected baseline code:", baselineCode);
+    console.log("Selected baseline name:", baselineList[baselineCode]);
+    setFormData({
+      ...formData,
+      baselineName: baselineList[baselineCode],
+      ebSgt: baselineCode,
+    });
+  };
+
+  const getBaselineCodeFromName = (name: string) => {
+    return (
+      Object.entries(baselineList).find(([, value]) => value === name)?.[0] ||
+      ""
+    );
   };
 
   return (
@@ -148,17 +185,24 @@ export function EnpiDialog({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="baselineCode" className="text-right">
-              基準線代碼
+            <label htmlFor="baselineName" className="text-right">
+              基準線名稱
             </label>
-            <Input
-              id="baselineCode"
-              value={formData.baselineCode}
-              onChange={(e) =>
-                setFormData({ ...formData, baselineCode: e.target.value })
-              }
-              className="col-span-3"
-            />
+            <Select
+              value={getBaselineCodeFromName(formData.baselineName)}
+              onValueChange={handleBaselineChange}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="選擇基準線" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(baselineList).map(([code, name]) => (
+                  <SelectItem key={code} value={code}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
@@ -223,7 +267,7 @@ export function EnpiDialog({
             </label>
             <Select
               value={formData.frequency}
-              onValueChange={(value: "月" | "週") =>
+              onValueChange={(value: "月" | "週" | "日" | "季") =>
                 setFormData({ ...formData, frequency: value })
               }
             >

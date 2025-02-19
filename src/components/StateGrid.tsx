@@ -24,6 +24,8 @@ interface SEUStateData extends MRT_RowData {
   percentage: number;
   IsSEU: boolean;
   status?: string;
+  EceSgt?: number;
+  groupId?: string;
 }
 
 interface StateGridProps {

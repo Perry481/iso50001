@@ -6,8 +6,10 @@ export interface Equipment {
   manufacturer: string;
   equipmentType: string;
   workArea: string;
+  workAreaName: string;
   department: string;
   usageGroup: string;
+  usageGroupName: string;
   status: string;
   ratedPower?: number;
   actualPower?: number;
@@ -15,6 +17,7 @@ export interface Equipment {
   assetNumber?: string;
   quantity: number;
   note?: string;
+  EceSgt?: number;
 }
 
 export interface RawEquipment {

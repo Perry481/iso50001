@@ -17,14 +17,6 @@ export const EQUIPMENT_TYPE_OPTIONS: SelectOption[] = [
   { value: "生產設備", label: "生產設備" },
 ];
 
-export const WORK_AREA_OPTIONS: SelectOption[] = [
-  { value: "車用廠(1F)", label: "車用廠(1F)" },
-  { value: "車用廠(4F)", label: "車用廠(4F)" },
-  { value: "中興廠", label: "中興廠" },
-  { value: "(未設定)", label: "(未設定)" },
-  { value: "總廠", label: "總廠" },
-];
-
 export const STATUS_OPTIONS: SelectOption[] = [
   { value: "使用中", label: "使用中" },
   { value: "報廢", label: "報廢" },

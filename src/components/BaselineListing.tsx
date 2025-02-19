@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { areaSettingsService } from "@/lib/area-settings/service";
-import { energyECFService } from "@/lib/energy-ecf/service";
-import { deptListService } from "@/lib/dept-list/service";
+import { getAreas } from "@/lib/area-settings/service";
+import { getECFs } from "@/lib/energy-ecf/service";
+import { getSubjects } from "@/lib/energy-subject/service";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface BaselineItem {
   id?: number | string;
@@ -19,6 +20,11 @@ interface BaselineItem {
   X3?: string;
   X4?: string;
   X5?: string;
+  X1Unit?: string;
+  X2Unit?: string;
+  X3Unit?: string;
+  X4Unit?: string;
+  X5Unit?: string;
   ebSgt: number;
 }
 
@@ -36,7 +42,7 @@ interface BaselineListingProps {
 }
 
 export function BaselineListing({
-  items,
+  items = [],
   title,
   itemsPerPage = 4,
   currentPage,
@@ -51,13 +57,16 @@ export function BaselineListing({
   const [energyTypeMap, setEnergyTypeMap] = useState<Record<string, string>>(
     {}
   );
-  const [deptMap, setDeptMap] = useState<Record<string, string>>({});
+  const [subjectMap, setSubjectMap] = useState<Record<string, string>>({});
+  const { companyName, isSchemaInitialized } = useCompany();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isSchemaInitialized) return;
+
       try {
         // Load areas
-        const areaData = await areaSettingsService.getAreas();
+        const areaData = await getAreas(companyName);
         const areaMap: Record<string, string> = {};
         areaData.forEach((area) => {
           areaMap[area.id] = area.name;
@@ -65,27 +74,29 @@ export function BaselineListing({
         setAreaMap(areaMap);
 
         // Load energy types
-        const ecfData = await energyECFService.getECFs();
+        const ecfData = await getECFs(companyName);
         const ecfMap: Record<string, string> = {};
         ecfData.forEach((ecf) => {
           ecfMap[ecf.code] = ecf.name;
         });
         setEnergyTypeMap(ecfMap);
 
-        // Load departments
-        const deptData = await deptListService.getDepts();
-        const deptMap: Record<string, string> = {};
-        deptData.forEach((dept) => {
-          deptMap[dept.value] = dept.label;
+        // Load subjects (shared groups)
+        const subjectData = await getSubjects(companyName);
+        const subjectMap: Record<string, string> = {};
+        subjectData.forEach((subject) => {
+          if (subject.id) {
+            subjectMap[subject.id] = subject.name;
+          }
         });
-        setDeptMap(deptMap);
+        setSubjectMap(subjectMap);
       } catch (error) {
         console.error("Error loading data:", error);
       }
     };
 
     loadData();
-  }, []);
+  }, [companyName, isSchemaInitialized]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -210,7 +221,7 @@ export function BaselineListing({
                       <p className="text-sm">
                         <span className="text-gray-500">共用群組：</span>
                         <span className="text-gray-900">
-                          {deptMap[item.sharedGroup] ||
+                          {subjectMap[item.sharedGroup] ||
                             item.sharedGroup ||
                             "(未設定)"}
                         </span>
@@ -222,28 +233,63 @@ export function BaselineListing({
                       <div className="space-y-1">
                         <p className="text-sm">
                           <span className="text-gray-500">X1:</span>{" "}
-                          <span className="text-gray-900">{item.X1}</span>
+                          <span className="text-gray-900">
+                            {item.X1}
+                            {item.X1Unit && (
+                              <span className="text-gray-500 text-xs ml-1">
+                                ({item.X1Unit})
+                              </span>
+                            )}
+                          </span>
                         </p>
                         <p className="text-sm">
                           <span className="text-gray-500">X2:</span>{" "}
-                          <span className="text-gray-900">{item.X2}</span>
+                          <span className="text-gray-900">
+                            {item.X2}
+                            {item.X2Unit && (
+                              <span className="text-gray-500 text-xs ml-1">
+                                ({item.X2Unit})
+                              </span>
+                            )}
+                          </span>
                         </p>
                         {item.X3 && (
                           <p className="text-sm">
                             <span className="text-gray-500">X3:</span>{" "}
-                            <span className="text-gray-900">{item.X3}</span>
+                            <span className="text-gray-900">
+                              {item.X3}
+                              {item.X3Unit && (
+                                <span className="text-gray-500 text-xs ml-1">
+                                  ({item.X3Unit})
+                                </span>
+                              )}
+                            </span>
                           </p>
                         )}
                         {item.X4 && (
                           <p className="text-sm">
                             <span className="text-gray-500">X4:</span>{" "}
-                            <span className="text-gray-900">{item.X4}</span>
+                            <span className="text-gray-900">
+                              {item.X4}
+                              {item.X4Unit && (
+                                <span className="text-gray-500 text-xs ml-1">
+                                  ({item.X4Unit})
+                                </span>
+                              )}
+                            </span>
                           </p>
                         )}
                         {item.X5 && (
                           <p className="text-sm">
                             <span className="text-gray-500">X5:</span>{" "}
-                            <span className="text-gray-900">{item.X5}</span>
+                            <span className="text-gray-900">
+                              {item.X5}
+                              {item.X5Unit && (
+                                <span className="text-gray-500 text-xs ml-1">
+                                  ({item.X5Unit})
+                                </span>
+                              )}
+                            </span>
                           </p>
                         )}
                       </div>
