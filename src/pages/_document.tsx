@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-css-tags */
 /* eslint-disable @next/next/no-sync-scripts */
 // pages/_document.tsx
 import Document, { Html, Head, Main, NextScript } from "next/document";
@@ -18,7 +17,10 @@ class MyDocument extends Document {
             rel="stylesheet"
           />
           {/* Load AdminLTE CSS */}
-          <link rel="stylesheet" href="/dist/css/adminlte.min.css" />
+          <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css"
+          />
         </Head>
         <body className="sidebar-mini">
           <Main />
@@ -36,7 +38,7 @@ class MyDocument extends Document {
             crossOrigin="anonymous"
           />
           {/* Finally AdminLTE */}
-          <script src="/dist/js/adminlte.min.js" />
+          <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js" />
         </body>
       </Html>
     );
