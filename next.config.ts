@@ -15,6 +15,30 @@ const nextConfig: NextConfig = {
   //   // your project has ESLint errors.
   //   ignoreDuringBuilds: true,
   // },
+
+  async rewrites() {
+    return [
+      // Handle root company route
+      {
+        source: "/:company",
+        destination: "/",
+      },
+      // Handle all company sub-routes
+      {
+        source: "/:company/:path*",
+        destination: "/:path*",
+      },
+      // Future i18n routes (commented out for now)
+      // {
+      //   source: "/:locale(en|zh-TW)/:company",
+      //   destination: "/:locale",
+      // },
+      // {
+      //   source: "/:locale(en|zh-TW)/:company/:path*",
+      //   destination: "/:locale/:path*",
+      // },
+    ];
+  },
 };
 
 export default nextConfig;
