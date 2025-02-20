@@ -82,7 +82,7 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
   const [isSchemaInitialized, setIsSchemaInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showLoading, setShowLoading] = useState(true); // New state for minimum display time
+  const [showLoading, setShowLoading] = useState(true);
 
   useEffect(() => {
     async function detectCompanyName() {
@@ -94,7 +94,10 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
 
       // Get company name from URL path
       const pathParts = window.location.pathname.split("/");
-      const companyFromPath = pathParts.find((part) => part && part.length > 0);
+      // Find first non-empty part that's not 'iso50001'
+      const companyFromPath = pathParts.find(
+        (part) => part && part !== "iso50001"
+      );
 
       if (companyFromPath) {
         setCompanyName(companyFromPath);
@@ -137,21 +140,18 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
     initializeSchema();
   }, [companyName]);
 
-  // Effect for minimum display time
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowLoading(false);
-    }, 5000); // 5 seconds minimum display time
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  // Show loading screen while detecting company or initializing schema
   if (isLoading || showLoading) {
     return <LoadingScreen />;
   }
 
-  // Show error screen if no company name is detected or there's an error
   if (error || !companyName) {
     return <ErrorScreen message={error || "No company name provided"} />;
   }
