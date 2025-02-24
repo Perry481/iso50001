@@ -19,6 +19,7 @@ import { getECFs } from "@/lib/energy-ecf/service";
 import type { ECF } from "@/lib/energy-ecf/types";
 import { getBaselineList } from "@/lib/energy-enb/service";
 import { useCompany } from "../contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 
 interface IndicatorData {
   date: string;
@@ -100,6 +101,8 @@ const tooltipProps = {
   },
 };
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 export default function ENPI() {
   const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [showListingPage, setShowListingPage] = useState(true);
@@ -126,7 +129,7 @@ export default function ENPI() {
       try {
         const [indicatorsResponse, ecfsData, baselineListData] =
           await Promise.all([
-            fetch(`/api/enpi?company=${companyName}`),
+            fetch(getApiUrl(`enpi?company=${companyName}`)),
             getECFs(companyName),
             getBaselineList(companyName),
           ]);
@@ -210,7 +213,7 @@ export default function ENPI() {
     try {
       console.log("Deleting indicator:", indicator);
       const response = await fetch(
-        `/api/enpi?company=${companyName}&id=${indicator.id}`,
+        getApiUrl(`enpi?company=${companyName}&id=${indicator.id}`),
         {
           method: "DELETE",
         }
@@ -254,7 +257,7 @@ export default function ENPI() {
           newBaselineName: data.baselineName,
           ebSgt: data.ebSgt,
         });
-        const response = await fetch(`/api/enpi?company=${companyName}`, {
+        const response = await fetch(getApiUrl(`enpi?company=${companyName}`), {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -277,7 +280,7 @@ export default function ENPI() {
       }
 
       console.log("Creating new indicator:", requestData);
-      const response = await fetch(`/api/enpi?company=${companyName}`, {
+      const response = await fetch(getApiUrl(`enpi?company=${companyName}`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -538,7 +541,7 @@ export default function ENPI() {
       console.log("Delete form data:", formData.toString());
 
       const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
+        `${BASE_URL}/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
         {
           method: "POST",
           headers: {
@@ -557,7 +560,9 @@ export default function ENPI() {
       }
 
       // Fetch updated data
-      const updatedResponse = await fetch(`/api/enpi?company=${companyName}`);
+      const updatedResponse = await fetch(
+        getApiUrl(`enpi?company=${companyName}`)
+      );
       const result = await updatedResponse.json();
 
       if (result.indicators) {
@@ -605,7 +610,7 @@ export default function ENPI() {
       );
 
       const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
+        `${BASE_URL}/GetEnergyPerformanceDetail.ashx?schema=${companyName}`,
         {
           method: "POST",
           headers: {
@@ -628,7 +633,7 @@ export default function ENPI() {
       }
 
       // After successful edit/add, fetch the updated theoretical values
-      const estimateUrl = `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?selecttype=estimatestatic&EnPiID=${currentIndicator.id}&Feature=X1&schema=${companyName}`;
+      const estimateUrl = `${BASE_URL}/GetEnergyPerformanceDetail.ashx?selecttype=estimatestatic&EnPiID=${currentIndicator.id}&Feature=X1&schema=${companyName}`;
 
       console.log("Fetching updated theoretical values from:", estimateUrl);
 
@@ -644,7 +649,9 @@ export default function ENPI() {
       console.log("Estimate response:", estimateText);
 
       // Fetch updated data to refresh the UI
-      const updatedResponse = await fetch(`/api/enpi?company=${companyName}`);
+      const updatedResponse = await fetch(
+        getApiUrl(`enpi?company=${companyName}`)
+      );
       const result = await updatedResponse.json();
 
       if (result.indicators) {

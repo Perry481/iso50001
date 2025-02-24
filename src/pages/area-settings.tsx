@@ -6,6 +6,7 @@ import { DataGrid } from "../components/DataGrid";
 import Tooltip from "@mui/material/Tooltip";
 import { DetailDialog, type Field } from "../components/dialogs/DetailDialog";
 import { deptListService } from "@/lib/dept-list/service";
+import { getApiUrl } from "@/lib/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -93,7 +94,7 @@ export default function AreaSettings() {
       try {
         // Load areas
         const areasResponse = await fetch(
-          `/api/area-settings?company=${companyName}`
+          getApiUrl(`area-settings?company=${companyName}`)
         );
         const areasData = await areasResponse.json();
 
@@ -105,7 +106,7 @@ export default function AreaSettings() {
 
         // Load departments
         const departmentsResponse = await fetch(
-          `/api/department?company=${companyName}`
+          getApiUrl(`department?company=${companyName}`)
         );
         const departmentsData = await departmentsResponse.json();
 
@@ -330,7 +331,7 @@ export default function AreaSettings() {
         : data;
 
       const response = await fetch(
-        `/api/area-settings?company=${companyName}`,
+        getApiUrl(`area-settings?company=${companyName}`),
         {
           method: isEditing ? "PUT" : "POST",
           headers: {
@@ -357,7 +358,7 @@ export default function AreaSettings() {
   const handleDeleteConfirmed = async (area: Area) => {
     try {
       const response = await fetch(
-        `/api/area-settings?company=${companyName}&id=${area.id}`,
+        getApiUrl(`area-settings?company=${companyName}&id=${area.id}`),
         {
           method: "DELETE",
         }
@@ -403,13 +404,16 @@ export default function AreaSettings() {
           }
         : data;
 
-      const response = await fetch(`/api/department?company=${companyName}`, {
-        method: isEditing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(
+        getApiUrl(`department?company=${companyName}`),
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       const result = await response.json();
 
@@ -428,7 +432,7 @@ export default function AreaSettings() {
   const handleDeleteDepartmentConfirmed = async (department: Department) => {
     try {
       const response = await fetch(
-        `/api/department?company=${companyName}&id=${department.id}`,
+        getApiUrl(`department?company=${companyName}&id=${department.id}`),
         {
           method: "DELETE",
         }

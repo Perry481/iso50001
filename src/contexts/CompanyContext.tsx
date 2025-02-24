@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { getApiUrl } from "@/lib/utils/api";
 
 interface CompanyContextType {
   companyName: string;
@@ -30,7 +31,7 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
   useEffect(() => {
     async function initializeSchema() {
       try {
-        const response = await fetch("/api/setup-schema", {
+        const response = await fetch(getApiUrl("setup-schema"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

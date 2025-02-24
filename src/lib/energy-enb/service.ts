@@ -5,6 +5,7 @@ import type {
   ComparisonData,
   ChartData,
 } from "./types";
+import { getApiUrl } from "@/lib/utils/api";
 
 export async function getENBs(company: string): Promise<{
   data: ENB[];
@@ -25,7 +26,7 @@ export async function getENBs(company: string): Promise<{
     };
   }
 
-  const response = await fetch(`/api/enb?company=${company}`);
+  const response = await fetch(getApiUrl(`enb?company=${company}`));
   const data = await response.json();
 
   if (!response.ok) {
@@ -49,14 +50,13 @@ export async function getENBDetails(
     return { baselineDetails: [] };
   }
 
-  const url = new URL("/api/enb", window.location.origin);
-  url.searchParams.append("company", company);
-  url.searchParams.append("ebSgt", ebSgt.toString());
-  if (feature) {
-    url.searchParams.append("feature", feature);
-  }
+  const params = new URLSearchParams({
+    company,
+    ebSgt: ebSgt.toString(),
+    ...(feature && { feature }),
+  });
 
-  const response = await fetch(url.toString());
+  const response = await fetch(getApiUrl(`enb?${params}`));
   const data = await response.json();
 
   if (!response.ok) {

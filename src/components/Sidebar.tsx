@@ -8,11 +8,12 @@ import { WorkflowStepper } from "./WorkflowStepper";
 
 // Define jQuery interface
 interface JQuery {
-  Treeview(action: string): void;
+  Treeview(action?: string): void;
+  length: number;
 }
 
 interface TreeviewStatic {
-  (action: string): void;
+  (action?: string): void;
 }
 
 interface JQueryStatic {
@@ -26,34 +27,58 @@ declare global {
     $: JQueryStatic;
   }
 }
+
 const Sidebar = () => {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.$) {
-      try {
-        window.$('[data-widget="treeview"]').Treeview("init");
+    // Wait for AdminLTE to be loaded
+    const initTreeview = () => {
+      if (
+        typeof window !== "undefined" &&
+        window.$ &&
+        window.$('[data-widget="treeview"]').length
+      ) {
+        try {
+          // Initialize without any parameters
+          window.$('[data-widget="treeview"]').Treeview();
 
-        // Add click handler for backdrop
-        document.addEventListener("click", (e) => {
-          const target = e.target as HTMLElement;
-          const sidebar = document.querySelector(".main-sidebar");
-          const burgerMenu = document.querySelector('[data-widget="pushmenu"]');
+          // Add click handler for backdrop
+          document.addEventListener("click", (e) => {
+            const target = e.target as HTMLElement;
+            const sidebar = document.querySelector(".main-sidebar");
+            const burgerMenu = document.querySelector(
+              '[data-widget="pushmenu"]'
+            );
 
-          // If clicking outside sidebar and burger menu, and sidebar is open
-          if (
-            document.body.classList.contains("sidebar-open") &&
-            !sidebar?.contains(target) &&
-            !burgerMenu?.contains(target)
-          ) {
-            // Trigger click on burger menu to close sidebar
-            (burgerMenu as HTMLElement)?.click();
-          }
-        });
-      } catch (error) {
-        console.error("Failed to initialize:", error);
+            // If clicking outside sidebar and burger menu, and sidebar is open
+            if (
+              document.body.classList.contains("sidebar-open") &&
+              !sidebar?.contains(target) &&
+              !burgerMenu?.contains(target)
+            ) {
+              // Trigger click on burger menu to close sidebar
+              (burgerMenu as HTMLElement)?.click();
+            }
+          });
+        } catch (error) {
+          console.error("Failed to initialize:", error);
+          // Retry after a short delay if initialization fails
+          setTimeout(initTreeview, 500);
+        }
+      } else {
+        // Retry if AdminLTE is not loaded yet
+        setTimeout(initTreeview, 500);
       }
-    }
+    };
+
+    // Start initialization
+    initTreeview();
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("click", () => {});
+    };
   }, []);
 
   return (

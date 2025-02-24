@@ -65,11 +65,13 @@ function transformDate(dateString: string): string {
   return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
 }
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 async function fetchReports(company: string): Promise<Report[]> {
   try {
     const timestamp = new Date().getTime();
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateMain.ashx?_search=false&nd=${timestamp}&rows=10&page=1&sidx=EeSgt&sord=asc&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateMain.ashx?_search=false&nd=${timestamp}&rows=10&page=1&sidx=EeSgt&sord=asc&schema=${company}`
     );
     const data: ApiReportResponse = await response.json();
 
@@ -119,7 +121,7 @@ function transformDetailRow(row: ApiDetailRow): Detail {
 async function fetchDetails(company: string, eeSgt: number): Promise<Detail[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?schema=${company}&EeSgt=${eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?schema=${company}&EeSgt=${eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
     );
     const data: ApiDetailResponse = await response.json();
 
@@ -206,7 +208,7 @@ export default async function handler(
 
         // Send POST request to create new detail
         const createResponse = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
+          `${BASE_URL}/GetEnergyEstimateDetail.ashx`,
           {
             method: "POST",
             headers: {
@@ -275,7 +277,7 @@ export default async function handler(
 
         // Send PUT request to update detail
         const updateResponse = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
+          `${BASE_URL}/GetEnergyEstimateDetail.ashx`,
           {
             method: "POST", // The API uses POST for updates too
             headers: {
@@ -316,7 +318,7 @@ export default async function handler(
 
         // Send DELETE request
         const deleteResponse = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
+          `${BASE_URL}/GetEnergyEstimateDetail.ashx`,
           {
             method: "POST", // The API uses POST for deletion too
             headers: {

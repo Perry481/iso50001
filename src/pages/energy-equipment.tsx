@@ -24,6 +24,7 @@ import type { ECF } from "@/lib/energy-ecf/types";
 import { useCompany } from "../contexts/CompanyContext";
 import { getAreas } from "@/lib/area-settings/service";
 import type { Area } from "@/lib/area-settings/types";
+import { getApiUrl } from "@/lib/utils/api";
 
 interface SelectOption {
   value: string;
@@ -90,7 +91,7 @@ export default function EnergyEquipment() {
 
       try {
         const response = await fetch(
-          `/api/energy-equipment?company=${companyName}`
+          getApiUrl(`energy-equipment?company=${companyName}`)
         );
         const data = await response.json();
         setEquipments(data.equipments);
@@ -489,7 +490,7 @@ export default function EnergyEquipment() {
       if (editingEquipment && "id" in editingEquipment) {
         // Update existing equipment
         const response = await fetch(
-          `/api/energy-equipment?company=${companyName}`,
+          getApiUrl(`energy-equipment?company=${companyName}`),
           {
             method: "PUT",
             headers: {
@@ -512,7 +513,7 @@ export default function EnergyEquipment() {
       } else {
         // Create new equipment
         const response = await fetch(
-          `/api/energy-equipment?company=${companyName}`,
+          getApiUrl(`energy-equipment?company=${companyName}`),
           {
             method: "POST",
             headers: {
@@ -545,7 +546,9 @@ export default function EnergyEquipment() {
     try {
       console.log("Deleting equipment:", deleteConfirm);
       const response = await fetch(
-        `/api/energy-equipment?company=${companyName}&id=${deleteConfirm.code}`,
+        getApiUrl(
+          `energy-equipment?company=${companyName}&id=${deleteConfirm.code}`
+        ),
         {
           method: "DELETE",
           headers: {

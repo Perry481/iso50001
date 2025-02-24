@@ -19,6 +19,7 @@ import type { Detail } from "@/lib/energy-review/types";
 import type { Equipment } from "@/lib/energy-equipment/types";
 import { DetailCheckboxDialog } from "../components/dialogs/DetailCheckboxDialog";
 import { useCompany } from "../contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 
 const PERFORMANCE_EVALUATION_OPTIONS = [
   { value: "不合格", label: "不合格" },
@@ -98,6 +99,8 @@ interface ApiDetailResponse {
     PerfomanceLevel: 1 | 2 | 3 | 4;
   }>;
 }
+
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
 
 export default function EnergyReview() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -224,7 +227,7 @@ export default function EnergyReview() {
 
       try {
         const response = await fetch(
-          `/api/energy-review?company=${companyName}`
+          getApiUrl(`energy-review?company=${companyName}`)
         );
         const data = await response.json();
         setReports(data.reports);
@@ -591,17 +594,14 @@ export default function EnergyReview() {
 
       console.log("Sending form data to API:", Object.fromEntries(formData));
 
-      const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: formData.toString(),
-        }
-      );
+      const response = await fetch(`${BASE_URL}/GetEnergyEstimateDetail.ashx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: formData.toString(),
+      });
 
       console.log("API Response status:", response.status);
 
@@ -618,7 +618,7 @@ export default function EnergyReview() {
       // Fetch updated details after successful operation
       console.log("Fetching updated details...");
       const updatedResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
+        `${BASE_URL}/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
       );
 
       const updatedData = await updatedResponse.json();
@@ -711,17 +711,14 @@ export default function EnergyReview() {
       const formBody = formParts.join("&");
       console.log("Sending batch form data to API:", formBody);
 
-      const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: formBody,
-        }
-      );
+      const response = await fetch(`${BASE_URL}/GetEnergyEstimateDetail.ashx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: formBody,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -731,7 +728,7 @@ export default function EnergyReview() {
 
       // Fetch updated details after successful operation
       const updatedResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
+        `${BASE_URL}/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
       );
 
       const updatedData = await updatedResponse.json();
@@ -765,17 +762,14 @@ export default function EnergyReview() {
 
       console.log("Delete form data:", Object.fromEntries(formData));
 
-      const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: formData.toString(),
-        }
-      );
+      const response = await fetch(`${BASE_URL}/GetEnergyEstimateDetail.ashx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: formData.toString(),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -784,7 +778,7 @@ export default function EnergyReview() {
 
       // Fetch updated details after successful deletion
       const updatedResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
+        `${BASE_URL}/GetEnergyEstimateDetail.ashx?schema=${companyName}&EeSgt=${selectedReport.eeSgt}&rows=10000&page=1&sidx=EeSgt&sord=asc`
       );
 
       const updatedData = await updatedResponse.json();
@@ -816,7 +810,7 @@ export default function EnergyReview() {
   const handleReportClick = async (report: Report) => {
     try {
       const response = await fetch(
-        `/api/energy-review?company=${companyName}&eeSgt=${report.eeSgt}`
+        getApiUrl(`energy-review?company=${companyName}&eeSgt=${report.eeSgt}`)
       );
       const data = await response.json();
       setDetails(data.details || []); // Add fallback empty array
@@ -830,7 +824,7 @@ export default function EnergyReview() {
   const handleReportSubmit = async (data: Report) => {
     try {
       const response = await fetch(
-        `/api/energy-review?company=${companyName}`,
+        getApiUrl(`energy-review?company=${companyName}`),
         {
           method: editingReport ? "PUT" : "POST",
           headers: {
@@ -860,7 +854,7 @@ export default function EnergyReview() {
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
       const response = await fetch(
-        `/api/energy-review?company=${companyName}&eeSgt=${report.eeSgt}`,
+        getApiUrl(`energy-review?company=${companyName}&eeSgt=${report.eeSgt}`),
         {
           method: "DELETE",
         }

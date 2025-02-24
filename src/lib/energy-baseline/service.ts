@@ -1,9 +1,10 @@
 import type { EnergyBaseline } from "./types";
+import { getApiUrl } from "@/lib/utils/api";
 
 class EnergyBaselineService {
   async getBaselines(): Promise<EnergyBaseline[]> {
     try {
-      const response = await fetch("/api/energy-baseline");
+      const response = await fetch(getApiUrl("energy-baseline"));
 
       if (!response.ok) {
         throw new Error("Failed to fetch energy baselines");

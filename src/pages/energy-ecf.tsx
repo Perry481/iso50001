@@ -15,6 +15,7 @@ import {
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { useCompany } from "../contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 
 export interface ECF {
   id?: string | number;
@@ -107,7 +108,9 @@ export default function EnergyECF() {
       if (!isSchemaInitialized) return;
 
       try {
-        const response = await fetch(`/api/energy-ecf?company=${companyName}`);
+        const response = await fetch(
+          getApiUrl(`energy-ecf?company=${companyName}`)
+        );
         const data = await response.json();
         setEcfs(data.ecfs);
       } catch (error) {
@@ -205,7 +208,7 @@ export default function EnergyECF() {
   const handleDeleteConfirmed = async (ecf: ECF) => {
     try {
       const response = await fetch(
-        `/api/energy-ecf?company=${companyName}&code=${ecf.code}`,
+        getApiUrl(`energy-ecf?company=${companyName}&code=${ecf.code}`),
         {
           method: "DELETE",
         }
@@ -217,29 +220,29 @@ export default function EnergyECF() {
         throw new Error(result.error || "Failed to delete ECF");
       }
 
-      // Update the local state with the new data from the server
       setEcfs(result.ecfs);
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Failed to delete ECF:", error);
-      // You might want to show an error message to the user here
     }
   };
 
   const handleSubmit = async (data: Omit<ECF, "id">) => {
     try {
-      // For edit operations, ensure we're using the existing code
       const payload = editingEcf
         ? { ...data, originalCode: editingEcf.code }
         : data;
 
-      const response = await fetch(`/api/energy-ecf?company=${companyName}`, {
-        method: editingEcf ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        getApiUrl(`energy-ecf?company=${companyName}`),
+        {
+          method: editingEcf ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const result = await response.json();
 
@@ -247,13 +250,11 @@ export default function EnergyECF() {
         throw new Error(result.error || "Failed to save ECF");
       }
 
-      // Update the local state with the new data from the server
       setEcfs(result.ecfs);
       setDialogOpen(false);
       setEditingEcf(undefined);
     } catch (error) {
       console.error("Error saving ECF:", error);
-      // You might want to show an error message to the user here
     }
   };
 

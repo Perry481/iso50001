@@ -8,6 +8,7 @@ import { DetailDialog, type Field } from "../components/dialogs/DetailDialog";
 import type { ECF } from "@/lib/energy-ecf/types";
 import { getECFs } from "@/lib/energy-ecf/service";
 import { useCompany } from "@/contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -86,7 +87,7 @@ export default function OrgEnergyUsage() {
 
         // Load records
         const recordsResponse = await fetch(
-          `/api/org-energy-usage?company=${companyName}`
+          getApiUrl(`org-energy-usage?company=${companyName}`)
         );
         const recordsData = await recordsResponse.json();
         setRecords(recordsData.records);
@@ -349,7 +350,7 @@ export default function OrgEnergyUsage() {
           : submissionData;
 
       const response = await fetch(
-        `/api/org-energy-usage?company=${companyName}`,
+        getApiUrl(`org-energy-usage?company=${companyName}`),
         {
           method: isEditing ? "PUT" : "POST",
           headers: {
@@ -376,7 +377,7 @@ export default function OrgEnergyUsage() {
   const handleDeleteConfirmed = async (record: EnergyUsage) => {
     try {
       const response = await fetch(
-        `/api/org-energy-usage?company=${companyName}&id=${record.id}`,
+        getApiUrl(`org-energy-usage?company=${companyName}&id=${record.id}`),
         {
           method: "DELETE",
         }

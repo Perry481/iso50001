@@ -90,6 +90,8 @@ const FREQUENCY_CODE_TO_TYPE: Record<string, "月" | "週" | "日" | "季"> = {
   S: "季",
 };
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 function transformDate(dateString: string): string {
   if (dateString.includes("/Date(")) {
     // Handle .NET JSON date format
@@ -113,7 +115,7 @@ async function fetchIndicatorDetails(
 ): Promise<IndicatorData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceDetail.ashx?schema=${company}&EnPiID=${enPiId}&rows=10000&page=1&sidx=StartDate&sord=asc`
+      `${BASE_URL}/GetEnergyPerformanceDetail.ashx?schema=${company}&EnPiID=${enPiId}&rows=10000&page=1&sidx=StartDate&sord=asc`
     );
 
     if (!response.ok) {
@@ -144,7 +146,7 @@ async function fetchIndicatorDetails(
 async function fetchIndicators(company: string): Promise<Indicator[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}&rows=10000&page=1&sidx=EnPiID&sord=asc`
+      `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}&rows=10000&page=1&sidx=EnPiID&sord=asc`
     );
 
     if (!response.ok) {
@@ -222,7 +224,7 @@ export default async function handler(
 
       // First get current state to determine next EnPiID
       const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}&rows=200&page=1&sidx=EnPiID&sord=asc`,
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}&rows=200&page=1&sidx=EnPiID&sord=asc`,
         {
           method: "GET",
           headers: {
@@ -270,11 +272,11 @@ export default async function handler(
       console.log("Form data:", formData.toString());
       console.log(
         "Request URL:",
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`
       );
 
       const addResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`,
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`,
         {
           method: "POST",
           headers: {
@@ -344,11 +346,11 @@ export default async function handler(
       console.log("Edit form data:", formData.toString());
       console.log(
         "Edit URL:",
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`
       );
 
       const editResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`,
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`,
         {
           method: "POST",
           headers: {
@@ -403,11 +405,11 @@ export default async function handler(
       console.log("Delete form data:", formData.toString());
       console.log(
         "Delete URL:",
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`
       );
 
       const deleteResponse = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyPerformanceIndex.ashx?schema=${company}`,
+        `${BASE_URL}/GetEnergyPerformanceIndex.ashx?schema=${company}`,
         {
           method: "POST",
           headers: {

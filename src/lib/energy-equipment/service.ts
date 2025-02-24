@@ -1,11 +1,14 @@
 import type { Equipment } from "./types";
+import { getApiUrl } from "@/lib/utils/api";
 
 export async function getEquipments(company: string): Promise<Equipment[]> {
   if (!company) {
     return [];
   }
 
-  const response = await fetch(`/api/energy-equipment?company=${company}`);
+  const response = await fetch(
+    getApiUrl(`energy-equipment?company=${company}`)
+  );
   const data = await response.json();
 
   if (!response.ok) {

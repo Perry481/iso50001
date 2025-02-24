@@ -51,13 +51,18 @@ interface ApiResponse {
 }
 
 interface ApiReportResponse {
-  EeSgt: number;
-  EnergyEstimateName: string;
-  CreatedUserID: string;
-  CreatedTime: string;
-  UpdatedTime: string;
-  StartDate: string;
-  EndDate: string;
+  page: number;
+  total: number;
+  records: number;
+  rows: Array<{
+    EeSgt: number;
+    EnergyEstimateName: string;
+    CreatedUserID: string;
+    CreatedTime: string;
+    UpdatedTime: string;
+    StartDate: string;
+    EndDate: string;
+  }>;
 }
 
 interface ApiSEUEquipmentResponse {
@@ -91,6 +96,8 @@ interface ApiWorkMonthResponse {
   Qty: number[][];
 }
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 function transformDate(dateString: string): string {
   // Remove "/Date(" and ")/" and convert to number
   const timestamp = parseInt(dateString.replace(/\/Date\((\d+)\)\//, "$1"));
@@ -100,12 +107,12 @@ function transformDate(dateString: string): string {
 
 async function fetchReports(company: string): Promise<Report[]> {
   try {
+    const timestamp = new Date().getTime();
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=estimatereport&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateMain.ashx?_search=false&nd=${timestamp}&rows=10&page=1&sidx=EeSgt&sord=asc&schema=${company}`
     );
-    const data: ApiReportResponse[] = await response.json();
-
-    return data.map((report) => ({
+    const data: ApiReportResponse = await response.json();
+    return data.rows.map((report) => ({
       reviewerId: report.CreatedUserID,
       title: report.EnergyEstimateName,
       startDate: transformDate(report.StartDate),
@@ -124,7 +131,7 @@ async function fetchEnergyConsumption(
 ): Promise<EnergyData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=kw&eesgt=${eeSgt}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=kw&eesgt=${eeSgt}&schema=${company}`
     );
     const data: EnergyData[] = await response.json();
     return data;
@@ -140,7 +147,7 @@ async function fetchEnergyEmission(
 ): Promise<EnergyData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=co2&eesgt=${eeSgt}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=energystatic&datatype=co2&eesgt=${eeSgt}&schema=${company}`
     );
     const data: EnergyData[] = await response.json();
     return data;
@@ -156,7 +163,7 @@ async function fetchSEUEquipmentData(
 ): Promise<SEUEquipmentData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiSEUEquipmentResponse = await response.json();
     return data.SEUList.map((item) => ({
@@ -178,7 +185,7 @@ async function fetchSEUStateData(
 ): Promise<SEUStateData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=equipmentstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiSEUEquipmentResponse = await response.json();
     return data.SEUList.map((item) => ({
@@ -201,7 +208,7 @@ async function fetchSEUGroupData(
 ): Promise<SEUGroupData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=groupstatic&eesgt=${eeSgt}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=groupstatic&eesgt=${eeSgt}&schema=${company}`
     );
     const data: ApiGroupResponse = await response.json();
     return data.SEUList.filter((item) => item.EnergyGroupName) // Filter out null group names
@@ -230,13 +237,13 @@ async function fetchWorkMonthData(
   try {
     // Fetch area static data
     const areaResponse = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=areastatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=areastatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
     );
     const areaData: AreaStaticResponse = await areaResponse.json();
 
     // Fetch monthly data
     const monthlyResponse = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyEstimateDetail.ashx?selecttype=workmonthstatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
+      `${BASE_URL}/GetEnergyEstimateDetail.ashx?selecttype=workmonthstatic&eesgt=${eeSgt}&categorytype=${categoryType}&schema=${company}`
     );
     const monthlyData: ApiWorkMonthResponse = await monthlyResponse.json();
 

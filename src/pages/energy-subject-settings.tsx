@@ -6,6 +6,7 @@ import Tooltip from "@mui/material/Tooltip";
 import { getSubjects } from "@/lib/energy-subject/service";
 import { useCompany } from "@/contexts/CompanyContext";
 import type { EnergySubject } from "@/lib/energy-subject/types";
+import { getApiUrl } from "@/lib/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -169,7 +170,7 @@ export default function EnergySubjectSettings() {
         : data;
 
       const response = await fetch(
-        `/api/energy-subject-settings?company=${companyName}`,
+        getApiUrl(`energy-subject-settings?company=${companyName}`),
         {
           method: isEditing ? "PUT" : "POST",
           headers: {
@@ -196,7 +197,9 @@ export default function EnergySubjectSettings() {
   const handleDeleteConfirmed = async (subject: EnergySubject) => {
     try {
       const response = await fetch(
-        `/api/energy-subject-settings?company=${companyName}&id=${subject.id}`,
+        getApiUrl(
+          `energy-subject-settings?company=${companyName}&id=${subject.id}`
+        ),
         {
           method: "DELETE",
         }

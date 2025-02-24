@@ -1,4 +1,5 @@
 import type { EnergySubject } from "./types";
+import { getApiUrl } from "@/lib/utils/api";
 
 export async function getSubjects(company: string): Promise<EnergySubject[]> {
   if (!company) {
@@ -6,7 +7,7 @@ export async function getSubjects(company: string): Promise<EnergySubject[]> {
   }
 
   const response = await fetch(
-    `/api/energy-subject-settings?company=${company}`
+    getApiUrl(`energy-subject-settings?company=${company}`)
   );
   const data = await response.json();
 

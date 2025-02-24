@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 interface ENBData {
   baselineCode: string;
   targetItem: string;
@@ -140,7 +142,7 @@ async function fetchENBData(company: string): Promise<ENBData[]> {
   try {
     // First try to get the ENB data
     const enbResponse = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineMain.ashx?schema=${company}&_search=false&rows=10000&page=1&sidx=EnergyBaselineName&sord=asc`
+      `${BASE_URL}/GetEnergyBaselineMain.ashx?schema=${company}&_search=false&rows=10000&page=1&sidx=EnergyBaselineName&sord=asc`
     );
 
     if (!enbResponse.ok) {
@@ -216,7 +218,7 @@ async function fetchBaselineDetails(
 ): Promise<BaselineData[]> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&EbSgt=${ebSgt}&rows=10000&page=1&sidx=StartDate&sord=asc`
+      `${BASE_URL}/GetEnergyBaselineDetail.ashx?schema=${company}&EbSgt=${ebSgt}&rows=10000&page=1&sidx=StartDate&sord=asc`
     );
 
     if (!response.ok) {
@@ -259,7 +261,7 @@ async function fetchRegressionStatic(
 }> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=regressionstatic&EbSgt=${ebSgt}&Feature=${feature}`
+      `${BASE_URL}/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=regressionstatic&EbSgt=${ebSgt}&Feature=${feature}`
     );
 
     if (!response.ok) {
@@ -358,7 +360,7 @@ async function fetchBaselineRegression(
 ): Promise<BaselineRegressionResponse> {
   try {
     const response = await fetch(
-      `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=baselineregression&EbSgt=${ebSgt}&Feature=${feature}`
+      `${BASE_URL}/GetEnergyBaselineDetail.ashx?schema=${company}&selecttype=baselineregression&EbSgt=${ebSgt}&Feature=${feature}`
     );
 
     if (!response.ok) {
@@ -515,7 +517,7 @@ export default async function handler(
         );
 
         const response = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx`,
+          `${BASE_URL}/GetEnergyBaselineDetail.ashx`,
           {
             method: "POST",
             headers: {
@@ -646,16 +648,13 @@ export default async function handler(
 
       console.log("Sending request with data:", Object.fromEntries(postData));
 
-      const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineMain.ashx`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: postData.toString(),
-        }
-      );
+      const response = await fetch(`${BASE_URL}/GetEnergyBaselineMain.ashx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: postData.toString(),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -716,57 +715,100 @@ export default async function handler(
         });
       }
 
-      if (!date || typeof date !== "string") {
-        return res.status(400).json({
-          status: "error",
-          code: "DATE_REQUIRED",
-          message: "Date is required for deletion",
-        });
-      }
+      // If date is provided, delete baseline detail
+      if (date && typeof date === "string") {
+        const postData = new URLSearchParams();
+        postData.append("oper", "del");
+        postData.append("schema", company);
+        postData.append("EbSgt", ebSgt);
+        postData.append("StartDate", date);
 
-      const postData = new URLSearchParams();
-      postData.append("oper", "del");
-      postData.append("schema", company);
-      postData.append("EbSgt", ebSgt);
-      postData.append("StartDate", date);
+        console.log(
+          "Sending delete detail request with data:",
+          Object.fromEntries(postData)
+        );
 
-      console.log(
-        "Sending delete request with data:",
-        Object.fromEntries(postData)
-      );
+        const response = await fetch(
+          `${BASE_URL}/GetEnergyBaselineDetail.ashx?schema=${company}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Accept: "application/json",
+            },
+            body: postData.toString(),
+          }
+        );
 
-      const response = await fetch(
-        `https://esg.jtmes.net/OptonSetup/GetEnergyBaselineDetail.ashx?schema=${company}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: postData.toString(),
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("External API error:", errorText);
+          return res.status(response.status).json({
+            status: "error",
+            code: "EXTERNAL_API_ERROR",
+            message: `Failed to delete baseline detail: ${errorText}`,
+            details: {
+              statusCode: response.status,
+              errorText,
+            },
+          });
         }
-      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("External API error:", errorText);
-        return res.status(response.status).json({
-          status: "error",
-          code: "EXTERNAL_API_ERROR",
-          message: `Failed to delete baseline detail: ${errorText}`,
-          details: {
-            statusCode: response.status,
-            errorText,
-          },
-        });
+        // Small delay before fetching updated details
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Fetch updated baseline details
+        const updatedDetails = await fetchBaselineDetails(
+          company,
+          Number(ebSgt)
+        );
+        return res.status(200).json({ baselineDetails: updatedDetails });
       }
+      // If no date is provided, delete the entire baseline
+      else {
+        const postData = new URLSearchParams();
+        postData.append("oper", "del");
+        postData.append("schema", company);
+        postData.append("EbSgt", ebSgt);
 
-      // Small delay before fetching updated details
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log(
+          "Sending delete baseline request with data:",
+          Object.fromEntries(postData)
+        );
 
-      // Fetch updated baseline details
-      const updatedDetails = await fetchBaselineDetails(company, Number(ebSgt));
-      return res.status(200).json({ baselineDetails: updatedDetails });
+        const response = await fetch(
+          `${BASE_URL}/GetEnergyBaselineMain.ashx?schema=${company}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Accept: "application/json",
+            },
+            body: postData.toString(),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("External API error:", errorText);
+          return res.status(response.status).json({
+            status: "error",
+            code: "EXTERNAL_API_ERROR",
+            message: `Failed to delete baseline: ${errorText}`,
+            details: {
+              statusCode: response.status,
+              errorText,
+            },
+          });
+        }
+
+        // Small delay before fetching updated data
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Fetch updated baseline list
+        const updatedData = await fetchENBData(company);
+        return res.status(200).json(updatedData);
+      }
     } catch (error) {
       console.error("API Error:", error);
       return res.status(500).json({

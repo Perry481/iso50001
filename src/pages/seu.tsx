@@ -20,6 +20,7 @@ import {
 import ReactECharts from "echarts-for-react";
 import { StateGrid } from "@/components/StateGrid";
 import { useCompany } from "../contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 
 type FilterType = "共用設備群組" | "工作場域管理" | "能源類別";
 
@@ -67,6 +68,8 @@ interface TooltipParam {
   value: number;
 }
 
+const BASE_URL = "https://esg.jtmes.net/OptonSetup";
+
 export default function SEU() {
   const [reports, setReports] = useState<Report[]>([]);
   const [showReportList, setShowReportList] = useState(true);
@@ -100,7 +103,7 @@ export default function SEU() {
       if (!isSchemaInitialized) return;
 
       try {
-        const response = await fetch(`/api/seu?company=${companyName}`);
+        const response = await fetch(getApiUrl(`seu?company=${companyName}`));
         const data = await response.json();
         setReports(data.reports);
       } catch (error) {
@@ -129,7 +132,9 @@ export default function SEU() {
     async (eeSgt: number, categoryType: string) => {
       try {
         const response = await fetch(
-          `/api/seu?type=energy&eeSgt=${eeSgt}&categoryType=${categoryType}&company=${companyName}`
+          getApiUrl(
+            `seu?type=energy&eeSgt=${eeSgt}&categoryType=${categoryType}&company=${companyName}`
+          )
         );
         const data = await response.json();
         setEnergyConsumption(data.energyConsumption || []);
@@ -180,7 +185,7 @@ export default function SEU() {
   const handleReportSubmit = async (data: Report) => {
     try {
       const method = editingReport ? "PUT" : "POST";
-      const response = await fetch(`/api/seu?company=${companyName}`, {
+      const response = await fetch(getApiUrl(`seu?company=${companyName}`), {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -204,7 +209,7 @@ export default function SEU() {
   const handleDeleteReportConfirmed = async (report: Report) => {
     try {
       const response = await fetch(
-        `/api/seu?company=${companyName}&eeSgt=${report.eeSgt}`,
+        getApiUrl(`seu?company=${companyName}&eeSgt=${report.eeSgt}`),
         {
           method: "DELETE",
         }
@@ -661,7 +666,7 @@ export default function SEU() {
 
         const selecttype = !row.IsSEU ? "isseu" : "removeseu";
         const response = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyMachineList.ashx?selecttype=${selecttype}&EceSgt=${row.EceSgt}&schema=${companyName}`
+          `${BASE_URL}/GetEnergyMachineList.ashx?selecttype=${selecttype}&EceSgt=${row.EceSgt}&schema=${companyName}`
         );
 
         if (!response.ok) {
@@ -702,7 +707,7 @@ export default function SEU() {
 
         const selecttype = !row.IsSEU ? "isseu" : "removeseu";
         const response = await fetch(
-          `https://esg.jtmes.net/OptonSetup/GetEnergyGroupList.ashx?selecttype=${selecttype}&EnergyGroupID=${row.groupId}&schema=${companyName}`
+          `${BASE_URL}/GetEnergyGroupList.ashx?selecttype=${selecttype}&EnergyGroupID=${row.groupId}&schema=${companyName}`
         );
 
         if (!response.ok) {

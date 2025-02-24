@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import ReactECharts from "echarts-for-react";
 import { useCompany } from "@/contexts/CompanyContext";
+import { getApiUrl } from "@/lib/utils/api";
 
 interface ENBData {
   baselineCode: string;
@@ -312,7 +313,7 @@ export default function ENB() {
       if (!isSchemaInitialized) return;
 
       try {
-        const response = await fetch(`/api/enb?company=${companyName}`);
+        const response = await fetch(getApiUrl(`enb?company=${companyName}`));
         const data = await response.json();
         setItems(data.data || []);
       } catch (error) {
@@ -329,7 +330,9 @@ export default function ENB() {
 
       try {
         const response = await fetch(
-          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          getApiUrl(
+            `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          )
         );
         if (!response.ok) {
           throw new Error("Failed to fetch regression data");
@@ -384,7 +387,7 @@ export default function ENB() {
   const handleDeleteConfirmed = async (item: ENBData) => {
     try {
       const response = await fetch(
-        `/api/enb?company=${companyName}&ebSgt=${item.ebSgt}`,
+        getApiUrl(`enb?company=${companyName}&ebSgt=${item.ebSgt}`),
         {
           method: "DELETE",
         }
@@ -427,7 +430,7 @@ export default function ENB() {
 
   const handleSubmit = async (formData: ENBFormData) => {
     try {
-      const response = await fetch(`/api/enb?company=${companyName}`, {
+      const response = await fetch(getApiUrl(`enb?company=${companyName}`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -494,7 +497,9 @@ export default function ENB() {
   const handleBaselineClick = async (baseline: ENBFormData) => {
     try {
       const response = await fetch(
-        `/api/enb?company=${companyName}&ebSgt=${baseline.ebSgt}&feature=X1`
+        getApiUrl(
+          `enb?company=${companyName}&ebSgt=${baseline.ebSgt}&feature=X1`
+        )
       );
       if (!response.ok) {
         throw new Error("Failed to fetch baseline details");
@@ -605,7 +610,7 @@ export default function ENB() {
 
     try {
       const response = await fetch(
-        `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`,
+        getApiUrl(`enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`),
         {
           method: "POST",
           headers: {
@@ -631,11 +636,15 @@ export default function ENB() {
       const [baselineResponse, regressionResponse] = await Promise.all([
         // Fetch updated baseline details
         fetch(
-          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+          getApiUrl(
+            `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+          )
         ),
         // Fetch updated regression data
         fetch(
-          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          getApiUrl(
+            `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          )
         ),
       ]);
 
@@ -686,7 +695,9 @@ export default function ENB() {
 
     try {
       const response = await fetch(
-        `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&date=${row.date}`,
+        getApiUrl(
+          `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&date=${row.date}`
+        ),
         {
           method: "DELETE",
         }
@@ -703,11 +714,15 @@ export default function ENB() {
       const [baselineResponse, regressionResponse] = await Promise.all([
         // Fetch updated baseline details
         fetch(
-          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+          getApiUrl(
+            `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}`
+          )
         ),
         // Fetch updated regression data
         fetch(
-          `/api/enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          getApiUrl(
+            `enb?company=${companyName}&ebSgt=${selectedBaseline.ebSgt}&feature=${selectedX}`
+          )
         ),
       ]);
 

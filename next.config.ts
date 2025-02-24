@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  basePath: "/iso50001",
+  assetPrefix: "/iso50001",
   transpilePackages: ["echarts", "echarts-for-react"],
   // Add this to suppress specific hydration warnings
   onDemandEntries: {
