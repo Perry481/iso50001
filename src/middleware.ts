@@ -9,12 +9,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If accessing root iso50001 path without company, redirect to default company
-  if (pathname === "/iso50001") {
-    return NextResponse.redirect(new URL("/ebc/iso50001", request.url));
-  }
+  // Important: DO NOT redirect /ebc/iso50001 or similar paths
+  // This was causing the double path issue
 
-  // Extract company from URL if present
+  // Just extract company from URL if present and set header
   const companyMatch = pathname.match(/^\/([^/]+)\/iso50001/);
   if (companyMatch) {
     const company = companyMatch[1];
