@@ -165,50 +165,27 @@ export default async function handler(
 
     case "POST":
       try {
-        const { eeSgt, detail } = body;
+        // For report creation
+        const { title, reviewerId, startDate, endDate } = body;
 
-        if (!eeSgt) {
+        if (!title || !reviewerId || !startDate || !endDate) {
           return res.status(400).json({
-            error: "EeSgt is required",
+            error: "Title, reviewerId, startDate, and endDate are required",
           });
         }
-
-        // Map performance evaluation to number
-        const performanceMap: Record<string, number> = {
-          不合格: 1,
-          正在改善中: 2,
-          初評具潛力: 3,
-          不確定: 4,
-        };
 
         // Create form data for the POST request
         const formData = new URLSearchParams();
         formData.append("oper", "add");
         formData.append("schema", company);
-        formData.append("EeSgt", eeSgt.toString());
-        formData.append("SourceType", detail.type === "生產設備" ? "M" : "C");
-        formData.append("MachineID", detail.equipmentCode || "");
-        formData.append("EceSgt", detail.eceSgt?.toString() || "0");
-        formData.append("DayHours", (detail.workHours || 0).toString());
-        formData.append("UsedDays", (detail.workDays || 0).toString());
-        formData.append("LoadFactor", (detail.loadFactor || 0).toString());
-        formData.append("Quantity", (detail.quantity || 0).toString());
-        formData.append("StartDate", detail.startDate || "");
-        formData.append("EndDate", detail.endDate || "");
-        formData.append("DataQuality", detail.dataQuality?.toString() || "2");
-        formData.append(
-          "PerfomanceLevel",
-          (performanceMap[detail.performanceEvaluation] || 4).toString()
-        );
+        formData.append("EnergyEstimateName", title);
+        formData.append("CreatedUserID", reviewerId);
+        formData.append("StartDate", startDate);
+        formData.append("EndDate", endDate);
 
-        console.log(
-          "Creating detail with form data:",
-          Object.fromEntries(formData)
-        );
-
-        // Send POST request to create new detail
+        // Send POST request to create new report
         const createResponse = await fetch(
-          `${BASE_URL}/GetEnergyEstimateDetail.ashx`,
+          `${BASE_URL}/GetEnergyEstimateMain.ashx`,
           {
             method: "POST",
             headers: {
@@ -219,65 +196,44 @@ export default async function handler(
           }
         );
 
-        console.log("Create response status:", createResponse.status);
-        const createResponseText = await createResponse.text();
-        console.log("Create response:", createResponseText);
-
         if (!createResponse.ok) {
-          throw new Error(`Failed to create detail: ${createResponseText}`);
+          const errorText = await createResponse.text();
+          throw new Error(`Failed to create report: ${errorText}`);
         }
 
-        // Fetch updated details list
-        const updatedDetails = await fetchDetails(company, eeSgt);
-        return res.status(200).json({ details: updatedDetails });
-      } catch {
+        // Fetch updated reports list
+        const reports = await fetchReports(company);
+        return res.status(200).json({ reports });
+      } catch (error) {
+        console.error("Failed to create report:", error);
         return res.status(500).json({
-          error: "Failed to create detail",
+          error: "Failed to create report",
         });
       }
 
     case "PUT":
       try {
-        const { eeSgt, itemNo, detail } = body;
+        const { title, reviewerId, startDate, endDate, eeSgt } = body;
 
-        if (!eeSgt || !itemNo) {
+        if (!eeSgt) {
           return res.status(400).json({
-            error: "EeSgt and ItemNo are required",
+            error: "EeSgt is required",
           });
         }
-
-        // Map performance evaluation to number
-        const performanceMap: Record<string, number> = {
-          不合格: 1,
-          正在改善中: 2,
-          初評具潛力: 3,
-          不確定: 4,
-        };
 
         // Create form data for the PUT request
         const formData = new URLSearchParams();
         formData.append("oper", "edit");
         formData.append("schema", company);
         formData.append("EeSgt", eeSgt.toString());
-        formData.append("ItemNo", itemNo.toString());
-        formData.append("SourceType", detail.type === "生產設備" ? "M" : "C");
-        formData.append("MachineID", detail.equipmentCode);
-        formData.append("EceSgt", detail.eceSgt.toString());
-        formData.append("DayHours", (detail.workHours || 0).toString());
-        formData.append("UsedDays", (detail.workDays || 0).toString());
-        formData.append("LoadFactor", (detail.loadFactor || 0).toString());
-        formData.append("Quantity", (detail.quantity || 0).toString());
-        formData.append("StartDate", detail.startDate);
-        formData.append("EndDate", detail.endDate);
-        formData.append("DataQuality", detail.dataQuality.toString());
-        formData.append(
-          "PerfomanceLevel",
-          performanceMap[detail.performanceEvaluation].toString()
-        );
+        formData.append("EnergyEstimateName", title);
+        formData.append("CreatedUserID", reviewerId);
+        formData.append("StartDate", startDate);
+        formData.append("EndDate", endDate);
 
-        // Send PUT request to update detail
+        // Send PUT request to update report
         const updateResponse = await fetch(
-          `${BASE_URL}/GetEnergyEstimateDetail.ashx`,
+          `${BASE_URL}/GetEnergyEstimateMain.ashx`,
           {
             method: "POST", // The API uses POST for updates too
             headers: {
@@ -289,15 +245,17 @@ export default async function handler(
         );
 
         if (!updateResponse.ok) {
-          throw new Error("Failed to update detail");
+          const errorText = await updateResponse.text();
+          throw new Error(`Failed to update report: ${errorText}`);
         }
 
-        // Fetch updated details list
-        const updatedDetails = await fetchDetails(company, eeSgt);
-        return res.status(200).json({ details: updatedDetails });
-      } catch {
+        // Fetch updated reports list
+        const reports = await fetchReports(company);
+        return res.status(200).json({ reports });
+      } catch (error) {
+        console.error("Failed to update report:", error);
         return res.status(500).json({
-          error: "Failed to update detail",
+          error: "Failed to update report",
         });
       }
 
