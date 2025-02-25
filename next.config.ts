@@ -5,20 +5,20 @@ const nextConfig: NextConfig = {
   basePath: "/iso50001",
   assetPrefix: "/iso50001",
   transpilePackages: ["echarts", "echarts-for-react"],
-  // Add rewrites to handle company path
-  async rewrites() {
-    return {
-      beforeFiles: [
-        // This handles company-specific paths
-        {
-          source: "/:company/iso50001/:path*",
-          destination: "/iso50001/:path*",
-        },
-      ],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
+  // Comment out any rewrites temporarily
+  // async rewrites() {
+  //   return {
+  //     beforeFiles: [
+  //       // This handles company-specific paths
+  //       {
+  //         source: "/:company/iso50001/:path*",
+  //         destination: "/iso50001/:path*",
+  //       },
+  //     ],
+  //     afterFiles: [],
+  //     fallback: [],
+  //   };
+  // },
   // Add this to suppress specific hydration warnings
   onDemandEntries: {
     // Period (in ms) where the server will keep pages in the buffer
