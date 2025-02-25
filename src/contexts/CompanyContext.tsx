@@ -54,27 +54,34 @@ function NoCompanyCard() {
 }
 
 function getCompanyName(pathname: string | null): string {
-  // For local development, always return 'ebc'
-  if (process.env.NODE_ENV === "development") {
-    return "ebc";
-  }
-
-  // For production, extract from URL
-  const pathParts = pathname?.split("/").filter(Boolean) || [];
-  const companyName = pathParts[0] === "iso50001" ? "" : pathParts[0] || "";
-  return companyName;
+  if (!pathname) return "";
+  const match = pathname.match(/^\/([^/]+)\/iso50001/);
+  return match ? match[1] : "";
 }
 
 export function CompanyProvider({ children }: CompanyProviderProps) {
   const [isSchemaInitialized, setIsSchemaInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previousPathname, setPreviousPathname] = useState<string | null>(null);
   const pathname = usePathname();
 
   // Get company name based on environment
   const companyName = getCompanyName(pathname);
 
   useEffect(() => {
+    // Only initialize schema when pathname root changes (not on subpage navigation)
+    const currentRoot = pathname?.split("/").slice(0, 3).join("/"); // Get /company/iso50001 part
+    const previousRoot = previousPathname?.split("/").slice(0, 3).join("/");
+
+    // If we're just navigating between pages within the same company, don't reload
+    if (previousPathname && currentRoot === previousRoot) {
+      return;
+    }
+
+    // Remember this pathname for future comparisons
+    setPreviousPathname(pathname);
+
     async function initializeSchema() {
       if (!companyName) {
         setError("Company name is required");
@@ -105,6 +112,7 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
     }
 
     // Start initialization
+    setIsLoading(true);
     initializeSchema();
 
     // Set minimum loading time of 500ms
@@ -116,7 +124,7 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [companyName]);
+  }, [companyName, pathname, previousPathname]);
 
   const value = {
     companyName,

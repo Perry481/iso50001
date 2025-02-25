@@ -7,7 +7,7 @@ class MyDocument extends Document {
     return (
       <Html lang="zh-TW">
         <Head>
-          {/* Add a script to intercept and fix navigation */}
+          {/* Add a script to fix navigation with dynamic company detection */}
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -16,10 +16,21 @@ class MyDocument extends Document {
                 var originalPushState = history.pushState;
                 var originalReplaceState = history.replaceState;
                 
+                // Extract company from path
+                function extractCompany(path) {
+                  const match = path.match(/\\/([^/]+)\\/iso50001/);
+                  return match ? match[1] : '';
+                }
+                
                 // Fix URLs with double iso50001 paths
                 function fixUrl(url) {
-                  if (url && url.includes('/iso50001/ebc/iso50001')) {
-                    return url.replace('/iso50001/ebc/iso50001', '/ebc/iso50001');
+                  if (!url) return url;
+                  
+                  // Extract company from current path if available
+                  const company = extractCompany(window.location.pathname);
+                  
+                  if (url.includes('/iso50001/' + company + '/iso50001')) {
+                    return url.replace('/iso50001/' + company + '/iso50001', '/' + company + '/iso50001');
                   }
                   return url;
                 }
@@ -35,9 +46,13 @@ class MyDocument extends Document {
                 };
                 
                 // Check current URL and fix if needed
-                if (window.location.pathname.includes('/iso50001/ebc/iso50001')) {
+                const company = extractCompany(window.location.pathname);
+                if (company && window.location.pathname.includes('/iso50001/' + company + '/iso50001')) {
                   window.location.replace(
-                    window.location.pathname.replace('/iso50001/ebc/iso50001', '/ebc/iso50001')
+                    window.location.pathname.replace(
+                      '/iso50001/' + company + '/iso50001', 
+                      '/' + company + '/iso50001'
+                    )
                   );
                 }
               })();

@@ -3,18 +3,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   basePath: "/iso50001",
-  assetPrefix: "/ebc/iso50001", // This is crucial - put company in assetPrefix
+  // Don't hardcode company in assetPrefix
+  assetPrefix: "/iso50001",
   transpilePackages: ["echarts", "echarts-for-react"],
-  // Add rewrites to handle the company path
+  // Use a more generic rewrite rule
   async rewrites() {
     return [
       {
-        source: "/iso50001/ebc/iso50001/:path*",
+        source: "/iso50001/:company/iso50001/:path*",
         destination: "/iso50001/:path*",
       },
     ];
   },
-  // Rest of config
   onDemandEntries: {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
