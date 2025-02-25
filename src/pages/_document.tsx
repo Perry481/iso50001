@@ -4,37 +4,56 @@ import Document, { Html, Head, Main, NextScript } from "next/document";
 
 class MyDocument extends Document {
   render() {
-    // Get the company from environment or default to ebc
-    const company = process.env.NODE_ENV === "production" ? "ebc" : "";
-    const basePath = "/iso50001";
-    const assetPrefix = company ? `/${company}${basePath}` : basePath;
-
     return (
       <Html lang="zh-TW">
         <Head>
-          {/* Add a script to fix static asset paths */}
+          {/* Add a script to intercept and fix navigation */}
           <script
             dangerouslySetInnerHTML={{
               __html: `
-              // Ensure Next.js loads assets from the correct path
-              window.__NEXT_ROUTER_BASEPATH = "${basePath}";
-              window.__NEXT_DATA__ = window.__NEXT_DATA__ || {};
-              window.__NEXT_DATA__.assetPrefix = "${assetPrefix}";
+              // Fix navigation to maintain correct URL format
+              (function() {
+                var originalPushState = history.pushState;
+                var originalReplaceState = history.replaceState;
+                
+                // Fix URLs with double iso50001 paths
+                function fixUrl(url) {
+                  if (url && url.includes('/iso50001/ebc/iso50001')) {
+                    return url.replace('/iso50001/ebc/iso50001', '/ebc/iso50001');
+                  }
+                  return url;
+                }
+                
+                // Override pushState
+                history.pushState = function(state, title, url) {
+                  return originalPushState.call(history, state, title, fixUrl(url));
+                };
+                
+                // Override replaceState
+                history.replaceState = function(state, title, url) {
+                  return originalReplaceState.call(history, state, title, fixUrl(url));
+                };
+                
+                // Check current URL and fix if needed
+                if (window.location.pathname.includes('/iso50001/ebc/iso50001')) {
+                  window.location.replace(
+                    window.location.pathname.replace('/iso50001/ebc/iso50001', '/ebc/iso50001')
+                  );
+                }
+              })();
             `,
             }}
           />
 
-          {/* Font Awesome */}
+          {/* Your existing head content */}
           <link
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
           />
-          {/* Bootstrap CSS */}
           <link
             href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
             rel="stylesheet"
           />
-          {/* AdminLTE CSS */}
           <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css"
@@ -43,19 +62,17 @@ class MyDocument extends Document {
         <body className="sidebar-mini">
           <Main />
           <NextScript />
-          {/* jQuery */}
+          {/* Your existing scripts */}
           <script
             src="https://code.jquery.com/jquery-3.6.0.min.js"
             integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
             crossOrigin="anonymous"
           />
-          {/* Bootstrap Bundle with Popper */}
           <script
             src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
             crossOrigin="anonymous"
           />
-          {/* AdminLTE JS */}
           <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js" />
         </body>
       </Html>
