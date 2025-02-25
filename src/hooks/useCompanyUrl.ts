@@ -7,20 +7,13 @@ export function useCompanyUrl() {
     // Clean the path
     const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
-    // Handle empty path
-    if (!cleanPath) {
-      return process.env.NODE_ENV === "development"
-        ? `/iso50001`
-        : `/${companyName}/iso50001`;
+    // In development, preserve the iso50001 path structure
+    if (process.env.NODE_ENV === "development") {
+      return `/iso50001/${cleanPath}`;
     }
 
-    // IMPORTANT: Always maintain company path in production
-    if (process.env.NODE_ENV === "production") {
-      return `/${companyName}/iso50001/${cleanPath}`;
-    }
-
-    // For development
-    return `/iso50001/${cleanPath}`;
+    // In production, use the company/iso50001 structure
+    return `/${companyName}/iso50001/${cleanPath}`;
   };
 
   return { buildUrl };

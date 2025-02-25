@@ -3,17 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   basePath: "/iso50001",
-  assetPrefix: "/iso50001",
+  // Change assetPrefix to include /ebc in production
+  assetPrefix:
+    process.env.NODE_ENV === "production" ? "/ebc/iso50001" : "/iso50001",
   transpilePackages: ["echarts", "echarts-for-react"],
-  // Add rewrites to handle company paths properly
-  async rewrites() {
-    return [
-      {
-        source: "/:company/iso50001/:path*",
-        destination: "/iso50001/:path*",
-      },
-    ];
-  },
   onDemandEntries: {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
