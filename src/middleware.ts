@@ -9,25 +9,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Extract company from URL path
+  // Handle company paths
   const companyMatch = pathname.match(/^\/([^/]+)\/iso50001\/?(.*)$/);
   if (companyMatch) {
     const company = companyMatch[1];
-
-    // Store company in headers but DON'T redirect
+    // Set company in headers for backend processing
     const response = NextResponse.next();
     response.headers.set("x-company", company);
     return response;
-  }
-
-  // If accessing root /iso50001 path, redirect to company path
-  if (pathname === "/iso50001" || pathname === "/iso50001/") {
-    return NextResponse.redirect(new URL("/ebc/iso50001", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/iso50001/:path*", "/:company/iso50001/:path*"],
+  matcher: ["/((?!_next/|api/).*)"],
 };

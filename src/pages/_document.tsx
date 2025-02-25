@@ -4,9 +4,26 @@ import Document, { Html, Head, Main, NextScript } from "next/document";
 
 class MyDocument extends Document {
   render() {
+    // Get the company from environment or default to ebc
+    const company = process.env.NODE_ENV === "production" ? "ebc" : "";
+    const basePath = "/iso50001";
+    const assetPrefix = company ? `/${company}${basePath}` : basePath;
+
     return (
       <Html lang="zh-TW">
         <Head>
+          {/* Add a script to fix static asset paths */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+              // Ensure Next.js loads assets from the correct path
+              window.__NEXT_ROUTER_BASEPATH = "${basePath}";
+              window.__NEXT_DATA__ = window.__NEXT_DATA__ || {};
+              window.__NEXT_DATA__.assetPrefix = "${assetPrefix}";
+            `,
+            }}
+          />
+
           {/* Font Awesome */}
           <link
             rel="stylesheet"
