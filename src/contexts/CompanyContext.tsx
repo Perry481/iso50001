@@ -63,24 +63,18 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
   const [isSchemaInitialized, setIsSchemaInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [previousPathname, setPreviousPathname] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const pathname = usePathname();
 
   // Get company name based on environment
   const companyName = getCompanyName(pathname);
 
   useEffect(() => {
-    // Only initialize schema when pathname root changes (not on subpage navigation)
-    const currentRoot = pathname?.split("/").slice(0, 3).join("/"); // Get /company/iso50001 part
-    const previousRoot = previousPathname?.split("/").slice(0, 3).join("/");
-
-    // If we're just navigating between pages within the same company, don't reload
-    if (previousPathname && currentRoot === previousRoot) {
+    // If we've already initialized this company, don't show loading again
+    if (initialized && companyName) {
+      setIsLoading(false);
       return;
     }
-
-    // Remember this pathname for future comparisons
-    setPreviousPathname(pathname);
 
     async function initializeSchema() {
       if (!companyName) {
@@ -103,28 +97,25 @@ export function CompanyProvider({ children }: CompanyProviderProps) {
         if (data.success) {
           setIsSchemaInitialized(true);
           setError(null);
+          // Mark as initialized so we don't reload on page navigation
+          setInitialized(true);
         } else {
           setError(data.message || "Failed to initialize schema");
         }
       } catch {
         setError("Failed to connect to schema initialization service");
+      } finally {
+        setIsLoading(false);
       }
     }
 
     // Start initialization
-    setIsLoading(true);
-    initializeSchema();
-
-    // Set minimum loading time of 500ms
-    const timeoutId = setTimeout(() => {
+    if (companyName) {
+      initializeSchema();
+    } else {
       setIsLoading(false);
-    }, 500);
-
-    // Cleanup timeout on unmount
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [companyName, pathname, previousPathname]);
+    }
+  }, [companyName, initialized]);
 
   const value = {
     companyName,
