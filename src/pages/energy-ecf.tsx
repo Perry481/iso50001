@@ -236,11 +236,11 @@ export default function EnergyECF() {
       const response = await fetch(
         getApiUrl(`energy-ecf?company=${companyName}`),
         {
-          method: editingEcf ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+        method: editingEcf ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
         }
       );
 

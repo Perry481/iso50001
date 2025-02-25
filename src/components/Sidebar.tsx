@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WorkflowStepper } from "./WorkflowStepper";
+import { useCompanyUrl } from "@/hooks/useCompanyUrl";
 
 // Define jQuery interface
 interface JQuery {
@@ -30,6 +31,7 @@ declare global {
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const { buildUrl } = useCompanyUrl();
 
   useEffect(() => {
     // Wait for AdminLTE to be loaded
@@ -123,7 +125,7 @@ const Sidebar = () => {
         }}
       >
         {/* Brand Logo */}
-        <Link href="/" className="brand-link">
+        <Link href={buildUrl("/")} className="brand-link">
           <span className="brand-text font-weight-light">Iso50001能耗管理</span>
         </Link>
         {/* Sidebar */}
@@ -150,9 +152,9 @@ const Sidebar = () => {
             >
               <li className="nav-item">
                 <Link
-                  href="/energy-ecf"
+                  href={buildUrl("/energy-ecf")}
                   className={`nav-link ${
-                    pathname === "/energy-ecf" ? "active" : ""
+                    pathname?.includes("/energy-ecf") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-bolt"></i>
@@ -161,9 +163,9 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/org-energy-usage"
+                  href={buildUrl("/org-energy-usage")}
                   className={`nav-link ${
-                    pathname === "/org-energy-usage" ? "active" : ""
+                    pathname?.includes("/org-energy-usage") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-industry"></i>
@@ -172,9 +174,9 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/area-settings"
+                  href={buildUrl("/area-settings")}
                   className={`nav-link ${
-                    pathname === "/area-settings" ? "active" : ""
+                    pathname?.includes("/area-settings") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-map-marker-alt"></i>
@@ -183,9 +185,11 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/energy-subject-settings"
+                  href={buildUrl("/energy-subject-settings")}
                   className={`nav-link ${
-                    pathname === "/energy-subject-settings" ? "active" : ""
+                    pathname?.includes("/energy-subject-settings")
+                      ? "active"
+                      : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-layer-group"></i>
@@ -194,9 +198,9 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/energy-equipment"
+                  href={buildUrl("/energy-equipment")}
                   className={`nav-link ${
-                    pathname === "/energy-equipment" ? "active" : ""
+                    pathname?.includes("/energy-equipment") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-clipboard-list"></i>
@@ -206,9 +210,9 @@ const Sidebar = () => {
 
               <li className="nav-item">
                 <Link
-                  href="/energy-review"
+                  href={buildUrl("/energy-review")}
                   className={`nav-link ${
-                    pathname === "/energy-review" ? "active" : ""
+                    pathname?.includes("/energy-review") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-search"></i>
@@ -217,8 +221,10 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/seu"
-                  className={`nav-link ${pathname === "/seu" ? "active" : ""}`}
+                  href={buildUrl("/seu")}
+                  className={`nav-link ${
+                    pathname?.includes("/seu") ? "active" : ""
+                  }`}
                 >
                   <i className="nav-icon fas fa-chart-line"></i>
                   <p>重大能源使用SEU</p>
@@ -226,8 +232,10 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/enb"
-                  className={`nav-link ${pathname === "/enb" ? "active" : ""}`}
+                  href={buildUrl("/enb")}
+                  className={`nav-link ${
+                    pathname?.includes("/enb") ? "active" : ""
+                  }`}
                 >
                   <i className="nav-icon fas fa-chart-area"></i>
                   <p>EnB能源基線</p>
@@ -235,8 +243,10 @@ const Sidebar = () => {
               </li>
               <li className="nav-item">
                 <Link
-                  href="/enpi"
-                  className={`nav-link ${pathname === "/enpi" ? "active" : ""}`}
+                  href={buildUrl("/enpi")}
+                  className={`nav-link ${
+                    pathname?.includes("/enpi") ? "active" : ""
+                  }`}
                 >
                   <i className="nav-icon fas fa-tachometer-alt"></i>
                   <p>EnPI能源績效指標</p>
