@@ -4,24 +4,23 @@ export function useCompanyUrl() {
   const { companyName } = useCompany();
 
   const buildUrl = (path: string) => {
-    if (!path) return `/${companyName}/iso50001`;
+    // Clean the path
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
-    // Clean the path - remove leading slash and iso50001 if present
-    let cleanPath = path.startsWith("/") ? path.slice(1) : path;
-    cleanPath = cleanPath.startsWith("iso50001/")
-      ? cleanPath.slice(9)
-      : cleanPath;
-
-    // Ensure we don't have empty paths
-    if (!cleanPath) return `/${companyName}/iso50001`;
-
-    // In development mode
-    if (process.env.NODE_ENV === "development") {
-      return `/iso50001/${cleanPath}`;
+    // Handle empty path
+    if (!cleanPath) {
+      return process.env.NODE_ENV === "development"
+        ? `/iso50001`
+        : `/${companyName}/iso50001`;
     }
 
-    // In production with company
-    return `/${companyName}/iso50001/${cleanPath}`;
+    // IMPORTANT: Always maintain company path in production
+    if (process.env.NODE_ENV === "production") {
+      return `/${companyName}/iso50001/${cleanPath}`;
+    }
+
+    // For development
+    return `/iso50001/${cleanPath}`;
   };
 
   return { buildUrl };
