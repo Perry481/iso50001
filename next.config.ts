@@ -9,12 +9,17 @@ const nextConfig: NextConfig = {
   // Using a more complete router configuration
   async rewrites() {
     return [
-      // Handle the problematic double-path pattern
+      // For development - fix double iso50001 paths
       {
-        source: "/iso50001/:company/iso50001/:path*",
+        source: "/iso50001/iso50001/:path*",
         destination: "/iso50001/:path*",
       },
-      // Make company path work properly
+      // For production - handle the problematic double-path pattern
+      {
+        source: "/iso50001/:company/iso50001/:path*",
+        destination: "/:company/iso50001/:path*",
+      },
+      // Make company path work with Next.js
       {
         source: "/:company/iso50001/:path*",
         destination: "/iso50001/:path*",

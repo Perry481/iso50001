@@ -7,25 +7,45 @@ export function useCompanyUrl() {
   const router = useRouter();
 
   const buildUrl = (path: string) => {
-    // Clean the path - remove leading slash if present
-    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    // Clean the path
+    let cleanPath = path;
+    while (cleanPath.startsWith("//")) {
+      cleanPath = cleanPath.substring(1);
+    }
+
+    if (!cleanPath.startsWith("/")) {
+      cleanPath = `/${cleanPath}`;
+    }
 
     // In development
     if (process.env.NODE_ENV === "development") {
       // Ensure path starts with /iso50001
-      return `/iso50001/${cleanPath}`;
+      const devUrl = cleanPath.startsWith("/iso50001")
+        ? cleanPath
+        : `/iso50001${cleanPath}`;
+
+      // Fix any double iso50001 issues
+      return devUrl.replace(/\/iso50001\/iso50001\//g, "/iso50001/");
     }
 
     // In production
     // Ensure path includes company and basePath
-    return `/${companyName}/iso50001/${cleanPath}`;
+    const prodUrl = cleanPath.startsWith("/iso50001")
+      ? `/${companyName}${cleanPath}`
+      : `/${companyName}/iso50001${cleanPath}`;
+
+    // Fix any potential double paths
+    return prodUrl.replace(/\/iso50001\/iso50001\//g, "/iso50001/");
   };
 
   // Add a navigate function to handle page transitions smoothly
   const navigate = (path: string) => {
     const url = buildUrl(path);
-    // Use shallow navigation to minimize page reloads
-    router.push(url, undefined, { shallow: true });
+    console.log("Navigating to:", url); // Debug log
+
+    // Use shallow: true to avoid unnecessary data fetching
+    // Use replace: true to avoid browser history issues
+    router.push(url, undefined, { shallow: true, scroll: false });
   };
 
   return { buildUrl, navigate };

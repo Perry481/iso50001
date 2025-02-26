@@ -11,70 +11,62 @@ class MyDocument extends Document {
           <script
             dangerouslySetInnerHTML={{
               __html: `
-                // Preventative fix for navigation issues
-                (function() {
-                  // Wait for Next.js to load
-                  window.addEventListener('load', function() {
-                    // Original history methods
-                    var originalPushState = history.pushState;
-                    var originalReplaceState = history.replaceState;
-                    
-                    // Extract company from path
-                    function extractCompany(path) {
-                      const match = path.match(/\\/([^/]+)\\/iso50001/);
-                      return match ? match[1] : '';
-                    }
-                    
-                    // Fix URLs before they're applied
-                    function fixUrl(url) {
-                      if (!url) return url;
-                      
-                      // Extract company from current path
-                      const company = extractCompany(window.location.pathname);
-                      
-                      if (company && url.includes('/iso50001/' + company + '/iso50001')) {
-                        return url.replace('/iso50001/' + company + '/iso50001', '/' + company + '/iso50001');
-                      }
-                      
-                      // Handle next.js client-side routing that might add /iso50001 prefix
-                      if (company && url.startsWith('/iso50001/') && !url.includes('/_next/')) {
-                        return '/' + company + url;
-                      }
-                      
-                      return url;
-                    }
-                    
-                    // Override pushState to prevent problematic URLs
-                    history.pushState = function(state, title, url) {
-                      const fixedUrl = fixUrl(url);
-                      return originalPushState.call(history, state, title, fixedUrl);
-                    };
-                    
-                    // Override replaceState to prevent problematic URLs
-                    history.replaceState = function(state, title, url) {
-                      const fixedUrl = fixUrl(url);
-                      return originalReplaceState.call(history, state, title, fixedUrl);
-                    };
-                    
-                    // If we already have a bad URL, fix it once
-                    const company = extractCompany(window.location.pathname);
-                    if (company && window.location.pathname.includes('/iso50001/' + company + '/iso50001')) {
-                      window.location.replace(
-                        window.location.pathname.replace(
-                          '/iso50001/' + company + '/iso50001', 
-                          '/' + company + '/iso50001'
-                        )
-                      );
-                    }
-                    
-                    // Also patch Next.js router if available
-                    if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) {
-                      // Mark that we've applied our fix
-                      window.__NEXT_DATA__.patchedRouter = true;
-                    }
-                  });
-                })();
-              `,
+    // Fix for Next.js routing issues
+    (function() {
+      // Fix URLs with problematic paths
+      function fixPath(path) {
+        if (!path) return path;
+        
+        // Fix double iso50001 in paths
+        return path.replace(/\\/iso50001\\/iso50001\\//g, '/iso50001/');
+      }
+      
+      // Intercept navigation
+      if (typeof window !== 'undefined') {
+        // Patch pushState and replaceState
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+        
+        history.pushState = function() {
+          const args = Array.from(arguments);
+          if (typeof args[2] === 'string') {
+            args[2] = fixPath(args[2]);
+          }
+          return originalPushState.apply(this, args);
+        };
+        
+        history.replaceState = function() {
+          const args = Array.from(arguments);
+          if (typeof args[2] === 'string') {
+            args[2] = fixPath(args[2]);
+          }
+          return originalReplaceState.apply(this, args);
+        };
+        
+        // Listen for URL changes
+        window.addEventListener('popstate', function() {
+          const currentPath = window.location.pathname;
+          if (currentPath.includes('/iso50001/iso50001/')) {
+            const fixedPath = fixPath(currentPath);
+            if (fixedPath !== currentPath) {
+              window.history.replaceState({}, '', fixedPath + window.location.search);
+            }
+          }
+        });
+        
+        // Fix current URL if needed
+        window.addEventListener('load', function() {
+          const currentPath = window.location.pathname;
+          if (currentPath.includes('/iso50001/iso50001/')) {
+            const fixedPath = fixPath(currentPath);
+            if (fixedPath !== currentPath) {
+              window.history.replaceState({}, '', fixedPath + window.location.search);
+            }
+          }
+        });
+      }
+    })();
+  `,
             }}
           />
 
