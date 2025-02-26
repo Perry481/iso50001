@@ -2,10 +2,9 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WorkflowStepper } from "./WorkflowStepper";
-import { useCompanyUrl } from "@/hooks/useCompanyUrl";
+import CompanyLink from "./CompanyLink";
 
 // Define jQuery interface
 interface JQuery {
@@ -31,7 +30,6 @@ declare global {
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { buildUrl } = useCompanyUrl();
 
   useEffect(() => {
     // Wait for AdminLTE to be loaded
@@ -125,9 +123,10 @@ const Sidebar = () => {
         }}
       >
         {/* Brand Logo */}
-        <Link href={buildUrl("/")} className="brand-link">
+        <CompanyLink href="/" className="brand-link">
           <span className="brand-text font-weight-light">Iso50001能耗管理</span>
-        </Link>
+        </CompanyLink>
+
         {/* Sidebar */}
         <div className="sidebar">
           {/* Sidebar user panel */}
@@ -151,41 +150,41 @@ const Sidebar = () => {
               data-accordion="false"
             >
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/energy-ecf")}
+                <CompanyLink
+                  href="/energy-ecf"
                   className={`nav-link ${
                     pathname?.includes("/energy-ecf") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-bolt"></i>
                   <p>能源ECF</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/org-energy-usage")}
+                <CompanyLink
+                  href="/org-energy-usage"
                   className={`nav-link ${
                     pathname?.includes("/org-energy-usage") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-industry"></i>
                   <p>組織能源使用</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/area-settings")}
+                <CompanyLink
+                  href="/area-settings"
                   className={`nav-link ${
                     pathname?.includes("/area-settings") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-map-marker-alt"></i>
                   <p>場域設定</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/energy-subject-settings")}
+                <CompanyLink
+                  href="/energy-subject-settings"
                   className={`nav-link ${
                     pathname?.includes("/energy-subject-settings")
                       ? "active"
@@ -194,63 +193,62 @@ const Sidebar = () => {
                 >
                   <i className="nav-icon fas fa-layer-group"></i>
                   <p>同類耗能主體設定</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/energy-equipment")}
+                <CompanyLink
+                  href="/energy-equipment"
                   className={`nav-link ${
                     pathname?.includes("/energy-equipment") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-clipboard-list"></i>
                   <p>耗能設備一覽表</p>
-                </Link>
+                </CompanyLink>
               </li>
-
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/energy-review")}
+                <CompanyLink
+                  href="/energy-review"
                   className={`nav-link ${
                     pathname?.includes("/energy-review") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-search"></i>
                   <p>能源審查</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/seu")}
+                <CompanyLink
+                  href="/seu"
                   className={`nav-link ${
                     pathname?.includes("/seu") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-chart-line"></i>
                   <p>重大能源使用SEU</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/enb")}
+                <CompanyLink
+                  href="/enb"
                   className={`nav-link ${
                     pathname?.includes("/enb") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-chart-area"></i>
                   <p>EnB能源基線</p>
-                </Link>
+                </CompanyLink>
               </li>
               <li className="nav-item">
-                <Link
-                  href={buildUrl("/enpi")}
+                <CompanyLink
+                  href="/enpi"
                   className={`nav-link ${
                     pathname?.includes("/enpi") ? "active" : ""
                   }`}
                 >
                   <i className="nav-icon fas fa-tachometer-alt"></i>
                   <p>EnPI能源績效指標</p>
-                </Link>
+                </CompanyLink>
               </li>
             </ul>
           </nav>
