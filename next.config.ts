@@ -1,3 +1,4 @@
+// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -6,25 +7,19 @@ const nextConfig: NextConfig = {
   assetPrefix: "/iso50001",
   transpilePackages: ["echarts", "echarts-for-react"],
 
-  // Using a more complete router configuration
+  // Simpler rewrites configuration
   async rewrites() {
-    return [
-      // For development - fix double iso50001 paths
-      {
-        source: "/iso50001/iso50001/:path*",
-        destination: "/iso50001/:path*",
-      },
-      // For production - handle the problematic double-path pattern
-      {
-        source: "/iso50001/:company/iso50001/:path*",
-        destination: "/:company/iso50001/:path*",
-      },
-      // Make company path work with Next.js
-      {
-        source: "/:company/iso50001/:path*",
-        destination: "/iso50001/:path*",
-      },
-    ];
+    return {
+      beforeFiles: [
+        // Fix double paths if they occur
+        {
+          source: "/iso50001/iso50001/:path*",
+          destination: "/iso50001/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 
   onDemandEntries: {

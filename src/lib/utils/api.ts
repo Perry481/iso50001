@@ -1,3 +1,4 @@
+// lib/utils/api.ts
 /**
  * Gets the base path from Next.js config or environment
  */
